@@ -239,12 +239,47 @@ void init_client() {
   ESP.restart();
 }
 
+IPAddress* clients[4] = { NULL };
+
 void hReg() {
-  server.send(200, "text/plain", "Registration of " + server.client().remoteIP().toString());
+  bool stored = false;
+  for (byte i = 0; i < 4; i++) {
+    if (clients[i] == NULL) {
+      IPAddress remote_ip = server.client().remoteIP();
+      clients[i] = new IPAddress(remote_ip[0], remote_ip[1], remote_ip[2], remote_ip[3]);
+      stored = true;
+      break;
+    }
+  }
+  if (stored) {
+    server.send(200, "text/plain", "Registration of " + server.client().remoteIP().toString());
+  } else {
+    server.send(200, "text/plain", "There is not any free slot.");
+  }
+}
+
+void hReset() {
+  server.send(200, "text/plain", "The server will restart.");
+  ESP.restart();
+}
+
+void hClients() {
+  String response = "Connected clients:\n";
+  for (byte i = 0; i < 4; i++) {
+    if (clients[i] != NULL) {
+      response += (*clients[i]).toString();
+    } else {
+      response += "(empty)";      
+    }
+    response += '\n';
+  }
+  server.send(200, "text/plain", response);
 }
 
 void init_server() {
   server.on("/reg", hReg);
+  server.on("/reset", hReset);
+  server.on("/clients", hClients);
   server.begin();
 }
 
