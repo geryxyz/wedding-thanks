@@ -130,7 +130,9 @@ void feedback(byte severity, byte d0=0, byte d1=0, byte d2=0) {
 #define CONNECTION_ERROR     3, 6, 1
 #define CONNECTION_LOST      3, 6, 2
 #define REGISTRATION_OK      1, 6, 2
-#define REGISTRATION_ERROR   1, 6, 2
+#define REGISTRATION_ERROR   3, 6, 2
+
+#define CLIENT_MISSING       3, 7, 1
 //end feedbacks table
 
 Adafruit_ADXL345_Unified accel1 = Adafruit_ADXL345_Unified(12345);
@@ -376,12 +378,26 @@ void check_clients() {
 ESP8266WebServer server(80);
 HTTPClient http_client;
 
+void hShow() {
+  if (server.arg("fR") != "" && server.arg("fG") != "" && server.arg("fB") != "" &&
+      server.arg("tR") != "" && server.arg("tG") != "" && server.arg("tB") != "" &&
+      server.arg("d") != "" ) {
+    server.send(200, "text/plain", "");
+    Color from = Color((uint8_t)server.arg("fR").toInt(), (uint8_t)server.arg("fG").toInt(), (uint8_t)server.arg("fB").toInt());
+    Color to = Color((uint8_t)server.arg("tR").toInt(), (uint8_t)server.arg("tG").toInt(), (uint8_t)server.arg("tB").toInt());
+    int duration = server.arg("d").toInt();
+    FADE(from, duration, to, pixels, 0, false)
+    Serial.println("showing animation...");
+    from.dump(); Serial.print(" --[ "); Serial.print(duration); Serial.print(" ]--> "); to.dump();
+  } else {
+    server.send(500, "text/plain", "");
+  }
+}
+
 void init_client() {
-  //TODO: register led control urls
+  server.on("/show", hShow);
+  server.begin();
   Serial.print("Registration with server ... ");
-  //String url = "http://";
-  //url += SERVER_IP;
-  //url += "/reg"; 
   http_client.begin("http://192.168.0.1/reg");
   int status_code = http_client.GET();
   http_client.end();
@@ -435,6 +451,7 @@ void init_server() {
   server.on("/reg", hReg);
   server.on("/reset", hReset);
   server.on("/clients", hClients);
+  server.on("/show", hShow);
   server.begin();
 }
 
@@ -510,20 +527,47 @@ void spark() {
 #define SENSOR_LIMIT .1
 */
 
+bool show_on(Color from, Color to, int duration, byte index) {
+  String url = "http://";
+  if (clients[index] == NULL) {
+    Serial.println("missing client");
+    feedback(CLIENT_MISSING);
+    return false;
+  } else {
+    url += clients[index]->toString();
+  }
+  url += "/show?";
+
+  url += "fR="; url += String(from.getR());
+  url += "&fG="; url += String(from.getG());
+  url += "&fB="; url += String(from.getB());
+
+  url += "&tR="; url += String(to.getR());
+  url += "&tG="; url += String(to.getG());
+  url += "&tB="; url += String(to.getB());
+
+  url += "&d="; url += String(duration);
+  Serial.println("sending animation");
+  Serial.println(url);
+  http_client.begin(url);
+  int status_code = http_client.GET();
+  http_client.end();
+  return true;
+}
+
 void loop() {
   if (server_mode) {
     check_clients();
+    if (show_on(Colors::red, Colors::green, 1000, 0)) {
+      delay(1000);
+    }
   } else {
-    feedback(IDLE);
+    //feedback(IDLE);
     if (WiFi.status() != WL_CONNECTED) {
       Serial.println("connection lost");
-      byte secs = random(60);
-      for (byte i = secs; i > 0; i--) {
-        Serial.print("Waiting for "); Serial.print(i); Serial.println(" seconds before restart");
+      while (true) {
         feedback(CONNECTION_LOST);
-        delay(1000);
       }
-      ESP.restart();
     }
   }
   server.handleClient();
