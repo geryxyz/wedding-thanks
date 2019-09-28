@@ -379,16 +379,23 @@ ESP8266WebServer server(80);
 HTTPClient http_client;
 
 void hShow() {
-  if (server.arg("fR") != "" && server.arg("fG") != "" && server.arg("fB") != "" &&
-      server.arg("tR") != "" && server.arg("tG") != "" && server.arg("tB") != "" &&
+  if (
+      server.arg("ftR") != "" && server.arg("ftG") != "" && server.arg("ftB") != "" &&
+      server.arg("ttR") != "" && server.arg("ttG") != "" && server.arg("ttB") != "" &&
+      server.arg("fbR") != "" && server.arg("fbG") != "" && server.arg("fbB") != "" &&
+      server.arg("tbR") != "" && server.arg("tbG") != "" && server.arg("tbB") != "" &&
       server.arg("d") != "" ) {
     server.send(200, "text/plain", "");
-    Color from = Color((uint8_t)server.arg("fR").toInt(), (uint8_t)server.arg("fG").toInt(), (uint8_t)server.arg("fB").toInt());
-    Color to = Color((uint8_t)server.arg("tR").toInt(), (uint8_t)server.arg("tG").toInt(), (uint8_t)server.arg("tB").toInt());
+    Color from[2] = {
+      Color((uint8_t)server.arg("ftR").toInt(), (uint8_t)server.arg("ftG").toInt(), (uint8_t)server.arg("ftB").toInt()),
+      Color((uint8_t)server.arg("fbR").toInt(), (uint8_t)server.arg("fbG").toInt(), (uint8_t)server.arg("fbB").toInt())      
+    };
+    Color to[2] = {
+      Color((uint8_t)server.arg("ttR").toInt(), (uint8_t)server.arg("ttG").toInt(), (uint8_t)server.arg("ttB").toInt()),
+      Color((uint8_t)server.arg("tbR").toInt(), (uint8_t)server.arg("tbG").toInt(), (uint8_t)server.arg("tbB").toInt())
+    };
     int duration = server.arg("d").toInt();
-    FADE(from, duration, to, pixels, 0, false)
-    Serial.println("showing animation...");
-    from.dump(); Serial.print(" --[ "); Serial.print(duration); Serial.print(" ]--> "); to.dump();
+    MULTIFADE(2, from, duration, to, pixels, false)
   } else {
     server.send(500, "text/plain", "");
   }
@@ -527,7 +534,9 @@ void spark() {
 #define SENSOR_LIMIT .1
 */
 
-bool show_on(Color from, Color to, int duration, byte index) {
+#define SENDING_DURATION 25
+
+bool show_on(Color from_top, Color to_top, Color from_back, Color to_back, int duration, byte index) {
   String url = "http://";
   if (clients[index] == NULL) {
     Serial.println("missing client");
@@ -538,13 +547,21 @@ bool show_on(Color from, Color to, int duration, byte index) {
   }
   url += "/show?";
 
-  url += "fR="; url += String(from.getR());
-  url += "&fG="; url += String(from.getG());
-  url += "&fB="; url += String(from.getB());
+  url += "ftR="; url += String(from_top.getR());
+  url += "&ftG="; url += String(from_top.getG());
+  url += "&ftB="; url += String(from_top.getB());
 
-  url += "&tR="; url += String(to.getR());
-  url += "&tG="; url += String(to.getG());
-  url += "&tB="; url += String(to.getB());
+  url += "&ttR="; url += String(to_top.getR());
+  url += "&ttG="; url += String(to_top.getG());
+  url += "&ttB="; url += String(to_top.getB());
+
+  url += "&fbR="; url += String(from_back.getR());
+  url += "&fbG="; url += String(from_back.getG());
+  url += "&fbB="; url += String(from_back.getB());
+
+  url += "&tbR="; url += String(to_back.getR());
+  url += "&tbG="; url += String(to_back.getG());
+  url += "&tbB="; url += String(to_back.getB());
 
   url += "&d="; url += String(duration);
   Serial.println("sending animation");
@@ -552,13 +569,23 @@ bool show_on(Color from, Color to, int duration, byte index) {
   http_client.begin(url);
   int status_code = http_client.GET();
   http_client.end();
+  if (status_code != 200) {
+    Serial.println("missing client");
+    feedback(CLIENT_MISSING);
+    return false;
+  }
   return true;
 }
 
 void loop() {
   if (server_mode) {
-    check_clients();
-    if (show_on(Colors::red, Colors::green, 1000, 0)) {
+    //check_clients();
+    unsigned long start = millis();
+    bool showed = show_on(Colors::red, Colors::blue, Colors::green, Colors::red + Colors::green, 1000, 0);
+    unsigned long end = millis();
+    unsigned long delta = end - start;
+    Serial.println(delta);
+    if (showed) {
       delay(1000);
     }
   } else {
