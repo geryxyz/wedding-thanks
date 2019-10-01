@@ -351,7 +351,7 @@ void init_network() {
 
 IPAddress* clients[4] = { NULL };
 
-void check_clients() {
+bool check_clients() {
   byte client_count = 0;
   for (byte i = 0; i < 4; i++) {
     if (clients[i] != NULL) {
@@ -375,6 +375,8 @@ void check_clients() {
       feedback(AP_4_CLIENT);
     break;
   }
+  Serial.print(client_count); Serial.println(" clients are connected");
+  return client_count == 4;
 }
 
 ESP8266WebServer server(80);
@@ -482,7 +484,7 @@ void setup() {
   Serial.println();
   WiFi.printDiag(Serial);
   init_pixels();
-  init_sensor();
+  //init_sensor();
   //detect_rest_position();
   init_network();
   init_http();
@@ -543,7 +545,7 @@ void spark() {
 bool show_remote(Color from_top, Color to_top, Color from_back, Color to_back, int duration, byte index) {
   String url = "http://";
   if (clients[index] == NULL) {
-    //Serial.println("missing client");
+    Serial.print("! ");
     feedback(CLIENT_MISSING);
     return false;
   } else {
@@ -594,21 +596,22 @@ void show_on(Color from_top, Color to_top, Color from_back, Color to_back, int d
 
 void loop() {
   if (server_mode) {
-    //check_clients();
-    //unsigned long start = millis();
-    Serial.print("animating... ");
-    for (byte i = 0; i < 5; i++) {
-      server.handleClient();
-      Serial.print(i); Serial.print(" ");
-      show_on(Colors::black, Colors::red, Colors::black, Colors::blue, 500, 0, i);
-      server.handleClient();
-      show_on(Colors::red, Colors::black, Colors::blue, Colors::black, 500, 250, i);
-      server.handleClient();
-    }
-    Serial.println();
-    //unsigned long end = millis();
-    //unsigned long delta = end - start;
-    //Serial.println(delta);
+    //if (check_clients()) { //TODO: why can not register with this????
+      //unsigned long start = millis();
+      Serial.print("animating... ");
+      for (byte i = 0; i < 5; i++) {
+        server.handleClient();
+        Serial.print(i); Serial.print(" ");
+        show_on(Colors::black, Colors::red, Colors::black, Colors::blue, 1000, 0, i);
+        server.handleClient();
+        show_on(Colors::red, Colors::black, Colors::blue, Colors::black, 1000, 250, i);
+        server.handleClient();
+      }
+      Serial.println();
+      //unsigned long end = millis();
+      //unsigned long delta = end - start;
+      //Serial.println(delta);
+    //}
   } else {
     //feedback(IDLE);
     if (WiFi.status() != WL_CONNECTED) {
