@@ -143,11 +143,13 @@ byte accel_num = 0;
 void init_sensor() {
   if(accel1.begin())
   {
+    Serial.println("looking for ADXL345...");
     accel_num = 1;
     feedback(SENSOR_OK);
     Serial.println("sensor init done");
   } else {
-    Wire.begin(); 
+    Serial.println("looking for LSM303...");
+    Wire.begin();
     if (accel2.init()) {
       accel2.enableDefault();
       accel_num = 2;
@@ -431,8 +433,10 @@ void hReg() {
   }
   if (stored) {
     server.send(200, "text/plain", "Registration of " + server.client().remoteIP().toString());
+    Serial.println("client registered");
   } else {
     server.send(500, "text/plain", "There is not any free slot.");
+    Serial.println("client registration error: no free slot");
   }
 }
 
@@ -536,10 +540,10 @@ void spark() {
 
 #define SENDING_DURATION 25
 
-bool show_on(Color from_top, Color to_top, Color from_back, Color to_back, int duration, byte index) {
+bool show_remote(Color from_top, Color to_top, Color from_back, Color to_back, int duration, byte index) {
   String url = "http://";
   if (clients[index] == NULL) {
-    Serial.println("missing client");
+    //Serial.println("missing client");
     feedback(CLIENT_MISSING);
     return false;
   } else {
@@ -564,8 +568,8 @@ bool show_on(Color from_top, Color to_top, Color from_back, Color to_back, int d
   url += "&tbB="; url += String(to_back.getB());
 
   url += "&d="; url += String(duration);
-  Serial.println("sending animation");
-  Serial.println(url);
+  //Serial.println("sending animation");
+  //Serial.println(url);
   http_client.begin(url);
   int status_code = http_client.GET();
   http_client.end();
@@ -577,17 +581,34 @@ bool show_on(Color from_top, Color to_top, Color from_back, Color to_back, int d
   return true;
 }
 
+void show_on(Color from_top, Color to_top, Color from_back, Color to_back, int duration, int wait_after, byte index) {
+  if (index % 5 == 4) {
+    Color from[2] = { from_top, from_back };
+    Color to[2] = { to_top, to_back };
+    MULTIFADE(2, from, duration, to, pixels, false)
+  } else {
+    show_remote(from_top, to_top, from_back, to_back, duration, index % 5);
+    delay(wait_after);
+  }
+}
+
 void loop() {
   if (server_mode) {
     //check_clients();
-    unsigned long start = millis();
-    bool showed = show_on(Colors::red, Colors::blue, Colors::green, Colors::red + Colors::green, 1000, 0);
-    unsigned long end = millis();
-    unsigned long delta = end - start;
-    Serial.println(delta);
-    if (showed) {
-      delay(1000);
+    //unsigned long start = millis();
+    Serial.print("animating... ");
+    for (byte i = 0; i < 5; i++) {
+      server.handleClient();
+      Serial.print(i); Serial.print(" ");
+      show_on(Colors::black, Colors::red, Colors::black, Colors::blue, 500, 0, i);
+      server.handleClient();
+      show_on(Colors::red, Colors::black, Colors::blue, Colors::black, 500, 250, i);
+      server.handleClient();
     }
+    Serial.println();
+    //unsigned long end = millis();
+    //unsigned long delta = end - start;
+    //Serial.println(delta);
   } else {
     //feedback(IDLE);
     if (WiFi.status() != WL_CONNECTED) {
