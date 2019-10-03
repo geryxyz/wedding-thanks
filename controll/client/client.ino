@@ -1,0 +1,354 @@
+#include <Adafruit_NeoPixel.h>
+#include <LightShow.h>
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_ADXL345_U.h>
+#include <LSM303.h>
+#include "Colors.h"
+#include <ESP8266WebServer.h>
+#include <cstdint>
+#include <limits>
+#include <ESP8266HTTPClient.h>
+#include <WiFiClient.h>
+
+template <typename T>
+constexpr double normalize (T value) {
+  return value < 0
+    ? -static_cast<double>(value) / std::numeric_limits<T>::min()
+    :  static_cast<double>(value) / std::numeric_limits<T>::max()
+    ;
+}
+
+#define ABS(x) ((x)>0?(x):-(x))
+
+float mapfloat(float x, float in_min, float in_max, float out_min, float out_max)
+{
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+#define LED 2
+#define COUNT 2
+
+Adafruit_NeoPixel pixels = Adafruit_NeoPixel(COUNT, LED, NEO_RGB + NEO_KHZ800);
+
+#define FEEDBACK_DUR 500
+
+void feedback_digit(byte digit) {
+  switch (digit) {
+    case 1:
+      FADE(Colors::black, FEEDBACK_DUR, Colors::red, pixels, 0, true)
+    break;
+    case 2:
+      FADE(Colors::black, FEEDBACK_DUR, Colors::red + Colors::green, pixels, 0, true)
+    break;
+    case 3:
+      FADE(Colors::black, FEEDBACK_DUR, Colors::green, pixels, 0, true) 
+    break;
+    case 4:
+      FADE(Colors::black, FEEDBACK_DUR, Colors::green + Colors::blue, pixels, 0, true)
+    break;
+    case 5:
+      FADE(Colors::black, FEEDBACK_DUR, Colors::blue, pixels, 0, true)
+    break;
+    case 6:
+      FADE(Colors::black, FEEDBACK_DUR, Colors::blue + Colors::red, pixels, 0, true)
+    break;
+    case 7:
+      FADE(Colors::black, FEEDBACK_DUR, Colors::white, pixels, 0, true)
+    break;
+    default:
+    break;
+  }
+}
+
+void feedback_severity(byte level) {
+  switch (level) {
+    case 0:
+      FADE(Colors::black, FEEDBACK_DUR/10, Colors::white, pixels, 0, true)
+      FADE(Colors::black, FEEDBACK_DUR/10, Colors::white, pixels, 0, true)
+    break;
+    case 1:
+      FADE(Colors::black, FEEDBACK_DUR/10, Colors::green, pixels, 0, true)
+      FADE(Colors::black, FEEDBACK_DUR/10, Colors::green, pixels, 0, true)
+    break;
+    case 2:
+      FADE(Colors::black, FEEDBACK_DUR/10, Colors::green + Colors::red, pixels, 0, true)
+      FADE(Colors::black, FEEDBACK_DUR/10, Colors::green + Colors::red, pixels, 0, true)
+    break;
+    case 3:
+      FADE(Colors::black, FEEDBACK_DUR/10, Colors::red, pixels, 0, true)
+      FADE(Colors::black, FEEDBACK_DUR/10, Colors::red, pixels, 0, true)
+    break;
+    default:
+    break;
+  }
+}
+
+void feedback(byte severity, byte d0=0, byte d1=0, byte d2=0) {
+  pixels.setBrightness(64);
+  feedback_severity(severity);
+  feedback_digit(d0);
+  feedback_digit(d1);
+  feedback_digit(d2);
+  feedback_severity(severity);
+  Colors::black.putAll(pixels, COUNT);
+  pixels.show();
+  pixels.setBrightness(255);
+  delay(FEEDBACK_DUR);
+}
+
+// 0 - status
+// 1 - ok
+// 2 - warn
+// 3 - error
+//feedbacks table
+#define IDLE                 0
+
+#define SENSOR_OK            1, 1
+#define SENSOR_INIT_ERROR    3, 1, 1
+#define SENSOR_ERROR         3, 1, 2 
+
+#define PIXELS_OK            1, 2
+
+#define BEFORE_DETECT        0, 3, 1
+#define DURING_DETECT        2, 3, 1
+#define AFTER_DETECT         0, 3, 2
+
+#define CONNECTION_WAITING   2, 4
+#define CONNECTION_OK        1, 4, 1 
+#define CONNECTION_ERROR     3, 4, 1
+#define CONNECTION_LOST      3, 4, 2
+
+#define REGISTRATION_OK      1, 5, 2
+#define REGISTRATION_ERROR   3, 5, 3
+//end feedbacks table
+
+Adafruit_ADXL345_Unified accel1 = Adafruit_ADXL345_Unified(12345);
+LSM303 accel2;
+
+byte accel_num = 0;
+
+void init_sensor() {
+  if(accel1.begin())
+  {
+    Serial.println("looking for ADXL345...");
+    accel_num = 1;
+    feedback(SENSOR_OK);
+    Serial.println("sensor init done");
+  } else {
+    Serial.println("looking for LSM303...");
+    Wire.begin();
+    if (accel2.init()) {
+      accel2.enableDefault();
+      accel_num = 2;
+      feedback(SENSOR_OK);
+      Serial.println("sensor init done");
+    } else {
+      feedback(SENSOR_INIT_ERROR);
+      Serial.println("sensor init error");
+      ESP.restart();
+    }
+  }
+}
+
+#define XLIMITS1 -14.08, 6.39
+#define YLIMITS1 -12.63, 7.41
+#define ZLIMITS1 -1.69, 20.04
+
+#define XLIMITS2 -1.0, 1.0
+#define YLIMITS2 -1.0, 1.0
+#define ZLIMITS2 -1.0, 1.0
+
+void measure(float &x, float &y, float &z) {
+  if (accel_num == 1) {
+    sensors_event_t event; 
+    accel1.getEvent(&event);
+    x = mapfloat(event.acceleration.x, XLIMITS1, -1.0, 1.0);
+    y = mapfloat(event.acceleration.y, YLIMITS1, -1.0, 1.0);
+    z = mapfloat(event.acceleration.z, ZLIMITS1, -1.0, 1.0);
+  } else if (accel_num == 2) {
+    accel2.readAcc();
+    x = mapfloat(normalize(accel2.a.x), XLIMITS2, -1.0, 1.0);
+    y = mapfloat(normalize(accel2.a.y), YLIMITS2, -1.0, 1.0);
+    z = mapfloat(normalize(accel2.a.z), ZLIMITS2, -1.0, 1.0);
+  } else {
+    Serial.println("Invalid sensor number.");
+    feedback(SENSOR_ERROR);
+    ESP.restart();
+  }
+  Serial.print("x: "); Serial.print(x);
+  Serial.print(" y: "); Serial.print(y);
+  Serial.print(" z: "); Serial.println(z);
+}
+
+float baseX;
+float baseY;
+float baseZ;
+
+void detect_rest_position() {
+  for (uint8_t i = 0; i < 10; i++) {
+    feedback(BEFORE_DETECT);
+  }
+
+  Serial.println("measuring rest position");
+  float sumX = 0;
+  float sumY = 0;
+  float sumZ = 0;
+  for (uint8_t i = 0; i < 10; i++) {
+    float x, y, z;
+    measure(x, y, z);
+    sumX += x;
+    sumY += y;
+    sumZ += z;
+    feedback(DURING_DETECT);
+  }
+  baseX = sumX / 10.0f;
+  baseY = sumY / 10.0f;
+  baseZ = sumZ / 10.0f;
+  feedback(AFTER_DETECT);
+  Serial.print("rest position (");
+  Serial.print(baseX); Serial.print("; ");
+  Serial.print(baseY); Serial.print("; ");
+  Serial.print(baseZ);
+  Serial.println(")");
+}
+
+void init_pixels() {
+  pixels.begin();
+  pixels.setBrightness(255);
+  Colors::black.putAll(pixels, COUNT);
+  pixels.show();
+  feedback(PIXELS_OK);
+  Serial.println("pixels init done");
+}
+
+const char* ssid = "wedding-thanks";
+const char* password = "iluvatar";
+#define SERVER_IP "192.168.0.1";
+IPAddress local_IP(192,168,0,1);
+IPAddress gateway(192,168,0,255);
+IPAddress subnet(255,255,255,0);
+bool server_mode = false;
+
+void init_STA() {
+  WiFi.begin(ssid, password);
+  Serial.print("connecting to WIFI");
+  while (WiFi.status() != WL_CONNECTED) {
+    feedback(CONNECTION_WAITING);
+    Serial.print(".");
+    //delay(1000);
+  }
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println(" WIFI connected.");
+    feedback(CONNECTION_OK);
+  } else {
+    Serial.println(" No network");
+    feedback(CONNECTION_ERROR);
+    ESP.restart();
+  }  
+}
+
+void init_network() {
+  Serial.println("Client mode activated");
+  server_mode = false;
+  WiFi.mode(WIFI_STA);
+  WiFi.setSleepMode(WIFI_NONE_SLEEP);
+  init_STA();
+}
+
+ESP8266WebServer server(80);
+HTTPClient http_client;
+
+void hShow() {
+  if (
+      server.arg("ftR") != "" && server.arg("ftG") != "" && server.arg("ftB") != "" &&
+      server.arg("ttR") != "" && server.arg("ttG") != "" && server.arg("ttB") != "" &&
+      server.arg("fbR") != "" && server.arg("fbG") != "" && server.arg("fbB") != "" &&
+      server.arg("tbR") != "" && server.arg("tbG") != "" && server.arg("tbB") != "" &&
+      server.arg("d") != "" ) {
+    server.send(200, "text/plain", "");
+    Color from[2] = {
+      Color((uint8_t)server.arg("ftR").toInt(), (uint8_t)server.arg("ftG").toInt(), (uint8_t)server.arg("ftB").toInt()),
+      Color((uint8_t)server.arg("fbR").toInt(), (uint8_t)server.arg("fbG").toInt(), (uint8_t)server.arg("fbB").toInt())      
+    };
+    Color to[2] = {
+      Color((uint8_t)server.arg("ttR").toInt(), (uint8_t)server.arg("ttG").toInt(), (uint8_t)server.arg("ttB").toInt()),
+      Color((uint8_t)server.arg("tbR").toInt(), (uint8_t)server.arg("tbG").toInt(), (uint8_t)server.arg("tbB").toInt())
+    };
+    int duration = server.arg("d").toInt();
+    MULTIFADE(2, from, duration, to, pixels, false)
+  } else {
+    server.send(500, "text/plain", "");
+  }
+}
+
+void init_http() {
+  server.on("/show", hShow);
+  server.begin();
+  Serial.print("Registration with server ... ");
+  http_client.begin("http://192.168.0.1/reg");
+  int status_code = http_client.GET();
+  http_client.end();
+  if (status_code == 200) {
+    Serial.print(" done");
+    Serial.print(" (status:"); Serial.print(status_code); Serial.println(")"); 
+    feedback(REGISTRATION_OK);
+  } else {
+    Serial.print(" error");
+    Serial.print(" (status:"); Serial.print(status_code); Serial.println(")");
+    if (status_code < 0) {
+       Serial.print("error: "); Serial.println(http_client.errorToString(status_code).c_str());
+       Serial.print(WiFi.status()); 
+    }
+    feedback(REGISTRATION_ERROR);
+    ESP.restart();
+  }
+}
+
+void setup() {
+  WiFi.mode(WIFI_OFF);
+  delay(1000);
+  randomSeed(analogRead(0));
+  Serial.begin(9600);
+  Serial.println();
+  init_pixels();
+  init_sensor();
+  //detect_rest_position();
+  init_network();
+  init_http();
+}
+
+void loop() {
+  server.handleClient();
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("connection lost");
+    while (true) {
+      feedback(CONNECTION_LOST);
+    }
+  }
+
+  /*  sensors_event_t event; 
+  accel.getEvent(&event);
+  float deltaX = baseX - mapfloat(event.acceleration.x, -14.08, 6.39, -1.0, 1.0);
+  float deltaZ = baseZ - mapfloat(event.acceleration.z, -1.69, 20.04, -1.0, 1.0);
+  float deltaY = baseY - mapfloat(event.acceleration.y, -12.63, 7.41, -1.0, 1.0);
+  Serial.print("deltaX: "); Serial.print(deltaX); Serial.print("  ");
+  Serial.print("deltaY: "); Serial.print(deltaY); Serial.print("  ");
+  Serial.print("deltaZ: "); Serial.print(deltaZ); Serial.print("  ");
+
+  if (   ABS(deltaX) > SENSOR_LIMIT 
+      || ABS(deltaY) > SENSOR_LIMIT
+      || ABS(deltaZ) > SENSOR_LIMIT
+      || random(100) == 0) {
+    switch (random(2)) {
+      case 0:
+        spark();
+        break;
+      case 1:
+        leaves();
+        break;
+    }
+  }
+
+  Serial.println();
+*/}

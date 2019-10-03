@@ -8,7 +8,8 @@
 #include <ESP8266WebServer.h>
 #include <cstdint>
 #include <limits>
-#include <ESP8266HTTPClient.h> //https://github.com/comdet/ESP8266HTTPClient.git
+#include <ESP8266HTTPClient.h>
+#include <WiFiClient.h>
 
 template <typename T>
 constexpr double normalize (T value) {
@@ -130,7 +131,7 @@ void feedback(byte severity, byte d0=0, byte d1=0, byte d2=0) {
 #define CONNECTION_ERROR     3, 6, 1
 #define CONNECTION_LOST      3, 6, 2
 #define REGISTRATION_OK      1, 6, 2
-#define REGISTRATION_ERROR   3, 6, 2
+#define REGISTRATION_ERROR   3, 6, 3
 
 #define CLIENT_MISSING       3, 7, 1
 //end feedbacks table
@@ -358,7 +359,7 @@ bool check_clients() {
       client_count++;
     }
   }
-  switch (client_count) {
+  /*switch (client_count) {
     case 0:
       feedback(AP_0_CLIENT);
     break;
@@ -374,13 +375,12 @@ bool check_clients() {
     case 4:
       feedback(AP_4_CLIENT);
     break;
-  }
+  }*/
   Serial.print(client_count); Serial.println(" clients are connected");
   return client_count == 4;
 }
 
 ESP8266WebServer server(80);
-HTTPClient http_client;
 
 void hShow() {
   if (
@@ -406,6 +406,7 @@ void hShow() {
 }
 
 void init_client() {
+  HTTPClient http_client;
   server.on("/show", hShow);
   server.begin();
   Serial.print("Registration with server ... ");
@@ -413,14 +414,18 @@ void init_client() {
   int status_code = http_client.GET();
   http_client.end();
   if (status_code == 200) {
-    Serial.print("done");
+    Serial.print(" done");
     feedback(REGISTRATION_OK);
+    Serial.print(" (status:"); Serial.print(status_code); Serial.println(")"); 
   } else {
-    Serial.print("error");
+    Serial.print(" error");
     feedback(REGISTRATION_ERROR);
+    Serial.print(" (status:"); Serial.print(status_code); Serial.println(")");
+    if (status_code < 0) {
+       Serial.print("error: "); Serial.println(http_client.errorToString(status_code).c_str()); 
+    }
     ESP.restart();
   }
-  Serial.print(" (status:"); Serial.print(status_code); Serial.println(")"); 
 }
 
 void hReg() {
@@ -543,6 +548,7 @@ void spark() {
 #define SENDING_DURATION 25
 
 bool show_remote(Color from_top, Color to_top, Color from_back, Color to_back, int duration, byte index) {
+  HTTPClient http_client;
   String url = "http://";
   if (clients[index] == NULL) {
     Serial.print("! ");
@@ -595,8 +601,9 @@ void show_on(Color from_top, Color to_top, Color from_back, Color to_back, int d
 }
 
 void loop() {
+  server.handleClient();
   if (server_mode) {
-    //if (check_clients()) { //TODO: why can not register with this????
+    /*if (check_clients()) { //TODO: why can not register with this????
       //unsigned long start = millis();
       Serial.print("animating... ");
       for (byte i = 0; i < 5; i++) {
@@ -611,7 +618,7 @@ void loop() {
       //unsigned long end = millis();
       //unsigned long delta = end - start;
       //Serial.println(delta);
-    //}
+    }*/
   } else {
     //feedback(IDLE);
     if (WiFi.status() != WL_CONNECTED) {
@@ -621,12 +628,8 @@ void loop() {
       }
     }
   }
-  server.handleClient();
 
-  
-//  FADE(Colors::black, 1000, Colors::red+Colors::blue, pixels, 0, true)
-//  FADE(Colors::black, 1000, Colors::red+Colors::blue, pixels, 1, true)
-/*  sensors_event_t event; 
+  /*  sensors_event_t event; 
   accel.getEvent(&event);
   float deltaX = baseX - mapfloat(event.acceleration.x, -14.08, 6.39, -1.0, 1.0);
   float deltaZ = baseZ - mapfloat(event.acceleration.z, -1.69, 20.04, -1.0, 1.0);

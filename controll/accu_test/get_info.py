@@ -4,7 +4,7 @@ import time
 import sys
 
 while True:
-    page = urllib.request.urlopen('http://192.168.0.91/')
+    page = urllib.request.urlopen('http://192.168.0.1/reg')
     now = datetime.datetime.now().time()
     code = int(page.getcode())
     if code == 200:
@@ -15,8 +15,8 @@ while True:
             log.write(str(now) + " " + content + "\n")
     else:
         print(str(now) + " " + code)
-    for i in range(5):
+    for i in range(1):
         print(i, end=' ')
         sys.stdout.flush()
-        time.sleep(1)
+        #time.sleep(1)
     print()
