@@ -121,6 +121,8 @@ void feedback(byte severity, byte d0=0, byte d1=0, byte d2=0) {
 
 #define REGISTRATION_OK      1, 5, 2
 #define REGISTRATION_ERROR   3, 5, 3
+
+#define MOVEMENT_ERROR       3, 6
 //end feedbacks table
 
 Adafruit_ADXL345_Unified accel1 = Adafruit_ADXL345_Unified(12345);
@@ -176,19 +178,19 @@ void measure(float &x, float &y, float &z) {
     feedback(SENSOR_ERROR);
     ESP.restart();
   }
-  Serial.print("x: "); Serial.print(x);
-  Serial.print(" y: "); Serial.print(y);
-  Serial.print(" z: "); Serial.println(z);
 }
 
-float baseX;
-float baseY;
-float baseZ;
+float baseX = 0.0f;
+float baseY = 0.0f;
+float baseZ = 0.0f;
 
 void detect_rest_position() {
+  Serial.print("Waiting before measuring rest position... ");
   for (uint8_t i = 0; i < 10; i++) {
     feedback(BEFORE_DETECT);
+    Serial.print(i); Serial.print(" ");
   }
+  Serial.println();
 
   Serial.println("measuring rest position");
   float sumX = 0;
@@ -200,6 +202,9 @@ void detect_rest_position() {
     sumX += x;
     sumY += y;
     sumZ += z;
+    Serial.print("x: "); Serial.print(x);
+    Serial.print(" y: "); Serial.print(y);
+    Serial.print(" z: "); Serial.println(z);
     feedback(DURING_DETECT);
   }
   baseX = sumX / 10.0f;
@@ -213,6 +218,14 @@ void detect_rest_position() {
   Serial.println(")");
 }
 
+void measure_delta(float &deltaX, float &deltaY, float &deltaZ) {
+  float x, y, z;
+  measure(x, y, z);
+  deltaX = baseX - x;
+  deltaY = baseY - y;
+  deltaZ = baseZ - z;
+}
+
 void init_pixels() {
   pixels.begin();
   pixels.setBrightness(255);
@@ -224,25 +237,22 @@ void init_pixels() {
 
 const char* ssid = "wedding-thanks";
 const char* password = "iluvatar";
-#define SERVER_IP "192.168.0.1";
-IPAddress local_IP(192,168,0,1);
-IPAddress gateway(192,168,0,255);
-IPAddress subnet(255,255,255,0);
-bool server_mode = false;
 
 void init_STA() {
   WiFi.begin(ssid, password);
   Serial.print("connecting to WIFI");
-  while (WiFi.status() != WL_CONNECTED) {
+  for (byte i = 0; i < 100; i++) {
+    if (WiFi.status() == WL_CONNECTED) {
+      break;
+    }
     feedback(CONNECTION_WAITING);
     Serial.print(".");
-    //delay(1000);
   }
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println(" WIFI connected.");
     feedback(CONNECTION_OK);
   } else {
-    Serial.println(" No network");
+    Serial.println(" No network.");
     feedback(CONNECTION_ERROR);
     ESP.restart();
   }  
@@ -250,7 +260,6 @@ void init_STA() {
 
 void init_network() {
   Serial.println("Client mode activated");
-  server_mode = false;
   WiFi.mode(WIFI_STA);
   WiFi.setSleepMode(WIFI_NONE_SLEEP);
   init_STA();
@@ -258,6 +267,10 @@ void init_network() {
 
 ESP8266WebServer server(80);
 HTTPClient http_client;
+
+void hRoot() {
+  server.send(200, "text/plain", "This is a working client.");
+}
 
 void hShow() {
   if (
@@ -282,8 +295,18 @@ void hShow() {
   }
 }
 
+bool is_measurement_on = true;
+
+void hToggleMeasurement() {
+  is_measurement_on = !is_measurement_on;
+  server.send(200, "text/plain", String(is_measurement_on));
+  Serial.print("Measurement: "); Serial.println(is_measurement_on);
+}
+
 void init_http() {
+  server.on("/", hRoot);
   server.on("/show", hShow);
+  server.on("/toggle", hToggleMeasurement);
   server.begin();
   Serial.print("Registration with server ... ");
   http_client.begin("http://192.168.0.1/reg");
@@ -298,9 +321,29 @@ void init_http() {
     Serial.print(" (status:"); Serial.print(status_code); Serial.println(")");
     if (status_code < 0) {
        Serial.print("error: "); Serial.println(http_client.errorToString(status_code).c_str());
-       Serial.print(WiFi.status()); 
+       Serial.print("WiFi status: "); Serial.println(WiFi.status()); 
     }
     feedback(REGISTRATION_ERROR);
+    ESP.restart();
+  }
+}
+
+void signalMovement() {
+  Serial.print("Signal movement... ");
+  http_client.begin("http://192.168.0.1/move");
+  int status_code = http_client.GET();
+  http_client.end();
+  if (status_code == 200) {
+    Serial.print("done");
+    Serial.print(" (status:"); Serial.print(status_code); Serial.println(")"); 
+  } else {
+    Serial.print("error");
+    Serial.print(" (status:"); Serial.print(status_code); Serial.println(")");
+    if (status_code < 0) {
+       Serial.print("error: "); Serial.println(http_client.errorToString(status_code).c_str());
+       Serial.print("WiFi status: "); Serial.println(WiFi.status()); 
+    }
+    feedback(MOVEMENT_ERROR);
     ESP.restart();
   }
 }
@@ -313,10 +356,12 @@ void setup() {
   Serial.println();
   init_pixels();
   init_sensor();
-  //detect_rest_position();
+  detect_rest_position();
   init_network();
   init_http();
 }
+
+#define SENSOR_LIMIT 0
 
 void loop() {
   server.handleClient();
@@ -327,28 +372,17 @@ void loop() {
     }
   }
 
-  /*  sensors_event_t event; 
-  accel.getEvent(&event);
-  float deltaX = baseX - mapfloat(event.acceleration.x, -14.08, 6.39, -1.0, 1.0);
-  float deltaZ = baseZ - mapfloat(event.acceleration.z, -1.69, 20.04, -1.0, 1.0);
-  float deltaY = baseY - mapfloat(event.acceleration.y, -12.63, 7.41, -1.0, 1.0);
-  Serial.print("deltaX: "); Serial.print(deltaX); Serial.print("  ");
-  Serial.print("deltaY: "); Serial.print(deltaY); Serial.print("  ");
-  Serial.print("deltaZ: "); Serial.print(deltaZ); Serial.print("  ");
-
-  if (   ABS(deltaX) > SENSOR_LIMIT 
-      || ABS(deltaY) > SENSOR_LIMIT
-      || ABS(deltaZ) > SENSOR_LIMIT
-      || random(100) == 0) {
-    switch (random(2)) {
-      case 0:
-        spark();
-        break;
-      case 1:
-        leaves();
-        break;
+  if (is_measurement_on) {
+    float deltaX, deltaY, deltaZ;
+    measure_delta(deltaX, deltaY, deltaZ);
+    Serial.print("deltaX: "); Serial.print(deltaX); Serial.print("\t");
+    Serial.print("deltaY: "); Serial.print(deltaY); Serial.print("\t");
+    Serial.print("deltaZ: "); Serial.print(deltaZ); Serial.print("\t");
+    Serial.println();
+  
+    if (   ABS(deltaX) > SENSOR_LIMIT 
+        || ABS(deltaY) > SENSOR_LIMIT
+        || ABS(deltaZ) > SENSOR_LIMIT) {
     }
   }
-
-  Serial.println();
-*/}
+}
