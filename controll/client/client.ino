@@ -289,13 +289,15 @@ void hShow() {
       Color((uint8_t)server.arg("tbR").toInt(), (uint8_t)server.arg("tbG").toInt(), (uint8_t)server.arg("tbB").toInt())
     };
     int duration = server.arg("d").toInt();
+    Serial.println("showing animation");
     MULTIFADE(2, from, duration, to, pixels, false)
   } else {
     server.send(500, "text/plain", "");
+    Serial.println("missing arguments for animation");
   }
 }
 
-bool is_measurement_on = true;
+bool is_measurement_on = false;
 
 void hToggleMeasurement() {
   is_measurement_on = !is_measurement_on;
