@@ -148,18 +148,19 @@ void init_sensor() {
     } else {
       feedback(SENSOR_INIT_ERROR);
       Serial.println("sensor init error");
-      ESP.restart();
+      accel_num = 0;
+      //ESP.restart();
     }
   }
 }
 
-#define XLIMITS1 -14.08, 6.39
-#define YLIMITS1 -12.63, 7.41
-#define ZLIMITS1 -1.69, 20.04
+#define XLIMITS1 -11.0, 9.0
+#define YLIMITS1 -5.0, 14.0
+#define ZLIMITS1 0.0, 24.0
 
-#define XLIMITS2 -1.0, 1.0
-#define YLIMITS2 -1.0, 1.0
-#define ZLIMITS2 -1.0, 1.0
+#define XLIMITS2 -.5, .5
+#define YLIMITS2 -.5, .5
+#define ZLIMITS2 -.5, .5
 
 void measure(float &x, float &y, float &z) {
   if (accel_num == 1) {
@@ -289,15 +290,15 @@ void hShow() {
       Color((uint8_t)server.arg("tbR").toInt(), (uint8_t)server.arg("tbG").toInt(), (uint8_t)server.arg("tbB").toInt())
     };
     int duration = server.arg("d").toInt();
-    Serial.println("showing animation");
-    MULTIFADE(2, from, duration, to, pixels, false)
+    //Serial.println("showing animation");
+    MULTIFADE(COUNT, from, duration, to, pixels, false)
   } else {
     server.send(500, "text/plain", "");
     Serial.println("missing arguments for animation");
   }
 }
 
-bool is_measurement_on = false;
+bool is_measurement_on = true;
 
 void hToggleMeasurement() {
   is_measurement_on = !is_measurement_on;
@@ -346,7 +347,7 @@ void signalMovement() {
        Serial.print("WiFi status: "); Serial.println(WiFi.status()); 
     }
     feedback(MOVEMENT_ERROR);
-    ESP.restart();
+    //ESP.restart();
   }
 }
 
@@ -358,12 +359,14 @@ void setup() {
   Serial.println();
   init_pixels();
   init_sensor();
-  detect_rest_position();
+  if (accel_num != 0) {
+    detect_rest_position();
+  }
   init_network();
   init_http();
 }
 
-#define SENSOR_LIMIT 0
+#define SENSOR_LIMIT .2
 
 void loop() {
   server.handleClient();
@@ -374,7 +377,7 @@ void loop() {
     }
   }
 
-  if (is_measurement_on) {
+  if (accel_num != 0 && is_measurement_on) {
     float deltaX, deltaY, deltaZ;
     measure_delta(deltaX, deltaY, deltaZ);
     Serial.print("deltaX: "); Serial.print(deltaX); Serial.print("\t");
@@ -382,9 +385,8 @@ void loop() {
     Serial.print("deltaZ: "); Serial.print(deltaZ); Serial.print("\t");
     Serial.println();
   
-    if (   ABS(deltaX) > SENSOR_LIMIT 
-        || ABS(deltaY) > SENSOR_LIMIT
-        || ABS(deltaZ) > SENSOR_LIMIT) {
+    if (ABS(deltaX) > SENSOR_LIMIT || ABS(deltaY) > SENSOR_LIMIT || ABS(deltaZ) > SENSOR_LIMIT) {
+      signalMovement();
     }
   }
 }
