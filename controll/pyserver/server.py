@@ -1,3 +1,4 @@
+import time
 import urllib.request
 import concurrent.futures
 
@@ -7,7 +8,6 @@ from flask_api import status
 
 
 def get(url):
-    print(f"getting {url}")
     with urllib.request.urlopen(url) as response:
         result = response
     return result
@@ -74,8 +74,11 @@ black = Color(0, 0, 0)
 @app.route('/demo')
 def demo():
     for client in clients:
-        send_show(black, black, red, red, 100, [client])
-        send_show(red, red, black, black, 100, [client])
+        send_show(black, black, red, red, 1000, [client])
+        send_show(red, red, black, black, 1000, [client])
+    time.sleep(1)
+    send_show(black, black, red, red, 1000, clients)
+    send_show(red, red, black, black, 1000, clients)
     return "demo executed"
 
 
