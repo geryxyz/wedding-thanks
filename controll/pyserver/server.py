@@ -1,10 +1,28 @@
-import aiohttp
-from http.client import HTTPResponse
-import asyncio
+import urllib.request
+import concurrent.futures
 
 from flask import Flask
 from flask import request
 from flask_api import status
+
+
+def get(url):
+    print(f"getting {url}")
+    with urllib.request.urlopen(url) as response:
+        result = response
+    return result
+
+
+def get_all_sync(urls):
+    responses = [get(url) for url in urls]
+    return all([int(response.getcode()) == 200 for response in responses])
+
+
+def get_all(urls):
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        responses = executor.map(get, urls)
+        return all([int(response.getcode()) == 200 for response in responses])
+
 
 app = Flask(__name__)
 
@@ -22,10 +40,10 @@ def reg():
     client = request.remote_addr
     if client not in clients:
         clients.append(client)
-        print("Successful registration: {} ({}th client)".format(client, len(clients)))
-        return '', status.HTTP_200_OK
+        print(f"Successful registration: {client} ({clients.index(client)}th client)")
     else:
-        return '', status.HTTP_500_INTERNAL_SERVER_ERROR
+        print(f"Clients already registered. ({clients.index(client)}th client)")
+    return '', status.HTTP_200_OK
 
 
 class Color(object):
@@ -35,46 +53,16 @@ class Color(object):
         self.g = g
         self.b = b
 
-    def for_send(self):
-        return {'R': self.r, 'G': self.g, 'B': self.b}
-
-
-async def fetch(session, url):
-    with aiohttp.Timeout(10):
-        async with session.get(url) as response:
-            return await response.text()
-
-
-async def fetch_all(session, urls):
-    results = await asyncio.gather(
-        *[fetch(session, url) for url in urls],
-        return_exceptions=True
-    )
-
-    for idx, url in enumerate(urls):
-        print('{}: {}'.format(url, 'ERR' if isinstance(results[idx], Exception) else 'OK'))
-    return results
-
 
 def send_show(from_top, from_back, to_top, to_back, duration, current_clients):
     urls = []
     for client in current_clients:
-        url = 'http://'
-        url += client
-        url += '/show'
-        url += '?ftR={R}&ftG={G}&ftB={B}'.format(**from_top.for_send())
-        url += '&ttR={R}&ttG={G}&ttB={B}'.format(**to_top.for_send())
-        url += '&fbR={R}&fbG={G}&fbB={B}'.format(**from_back.for_send())
-        url += '&tbR={R}&tbG={G}&tbB={B}'.format(**to_back.for_send())
-        url += '&d={}'.format(duration)
+        url = f'http://{client}/show' \
+            f'?ftR={from_top.r}&ftG={from_top.g}&ftB={from_top.b}&ttR={to_top.r}&ttG={to_top.g}&ttB={to_top.b}' \
+            f'&fbR={from_back.r}&fbG={from_back.g}&fbB={from_back.b}&tbR={to_back.r}&tbG={to_back.g}&tbB={to_back.b}&d={duration}'
         print(url)
         urls.append(url)
-
-    loop = asyncio.get_event_loop()
-    with aiohttp.ClientSession(loop=loop) as session:
-        results = loop.run_until_complete(fetch_all(session, urls))
-        print(results)
-    #loop.close()
+    get_all(urls)
 
 
 red = Color(255, 0, 0)
