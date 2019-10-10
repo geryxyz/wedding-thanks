@@ -331,14 +331,19 @@ void init_http() {
   }
 }
 
+#define BOUNCING_LIMIT 3000
+unsigned long last_movement = 0;
+
 void signalMovement() {
   Serial.print("Signal movement... ");
   http_client.begin("http://192.168.1.2/move");
   int status_code = http_client.GET();
   http_client.end();
   if (status_code == 200) {
+    last_movement = millis();
     Serial.print("done");
     Serial.print(" (status:"); Serial.print(status_code); Serial.println(")"); 
+    
   } else {
     Serial.print("error");
     Serial.print(" (status:"); Serial.print(status_code); Serial.println(")");
@@ -367,8 +372,6 @@ void setup() {
 }
 
 #define SENSOR_LIMIT .1
-#define BOUNCING_LIMIT 3000
-unsigned long last_movement = 0;
 
 void loop() {
   server.handleClient();
