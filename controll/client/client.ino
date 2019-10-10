@@ -85,7 +85,7 @@ void feedback_severity(byte level) {
 }
 
 void feedback(byte severity, byte d0=0, byte d1=0, byte d2=0) {
-  pixels.setBrightness(64);
+  pixels.setBrightness(255);
   feedback_severity(severity);
   feedback_digit(d0);
   feedback_digit(d1);
@@ -94,7 +94,7 @@ void feedback(byte severity, byte d0=0, byte d1=0, byte d2=0) {
   Colors::black.putAll(pixels, COUNT);
   pixels.show();
   pixels.setBrightness(255);
-  delay(FEEDBACK_DUR);
+  delay(FEEDBACK_DUR * 2);
 }
 
 // 0 - status
@@ -312,7 +312,7 @@ void init_http() {
   server.on("/toggle", hToggleMeasurement);
   server.begin();
   Serial.print("Registration with server ... ");
-  http_client.begin("http://192.168.0.1/reg");
+  http_client.begin("http://192.168.1.2/reg");
   int status_code = http_client.GET();
   http_client.end();
   if (status_code == 200) {
@@ -333,7 +333,7 @@ void init_http() {
 
 void signalMovement() {
   Serial.print("Signal movement... ");
-  http_client.begin("http://192.168.0.1/move");
+  http_client.begin("http://192.168.1.2/move");
   int status_code = http_client.GET();
   http_client.end();
   if (status_code == 200) {
@@ -366,7 +366,9 @@ void setup() {
   init_http();
 }
 
-#define SENSOR_LIMIT .2
+#define SENSOR_LIMIT .1
+#define BOUNCING_LIMIT 3000
+unsigned long last_movement = 0;
 
 void loop() {
   server.handleClient();
@@ -377,7 +379,7 @@ void loop() {
     }
   }
 
-  if (accel_num != 0 && is_measurement_on) {
+  if (accel_num != 0 && is_measurement_on && (millis() - last_movement > BOUNCING_LIMIT)) {
     float deltaX, deltaY, deltaZ;
     measure_delta(deltaX, deltaY, deltaZ);
     Serial.print("deltaX: "); Serial.print(deltaX); Serial.print("\t");
