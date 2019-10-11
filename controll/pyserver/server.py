@@ -7,6 +7,7 @@ from flask import request
 from flask_api import status
 
 import os
+import typing
 
 
 def get(url):
@@ -60,7 +61,77 @@ class Color(object):
         self.b = b
 
     def __str__(self):
-        return f'color({self.r / 255},{self.g / 255},{self.b / 255})'
+        return f'#({self.r / 255}-{self.g / 255}-{self.b / 255})'
+
+
+red = Color(255, 0, 0)
+green = Color(0, 255, 0)
+blue = Color(0, 0, 255)
+black = Color(0, 0, 0)
+white = Color(255, 255, 255)
+
+
+class Show(object):
+    def __init__(self, front: Color = black, back: Color = black):
+        self.start = (front, back)
+        self.stop = (black, black)
+        self.duration = 1000
+        self.clients = []
+
+    def to(self, front: Color, back: Color):
+        self.stop = (front, back)
+        return self
+
+    def during(self, seconds: float):
+        self.duration = int(seconds * 1000)
+        return self
+
+    def on(self, *target: str):
+        self.clients = target
+        return self
+
+    def __str__(self):
+        return f'{" | ".join(map(str, self.start))} [ {self.duration / 1000} s ] {" | ".join(map(str, self.stop))} on {" , ".join(self.clients)}'
+
+    def play(self):
+        # TODO: send it to clients
+        print(self)
+
+
+class Wait(object):
+    def __init__(self, duration: float):
+        self.duration = duration
+
+    def __str__(self):
+        return f'waiting {self.duration} s'
+
+    def play(self):
+        print(self)
+        time.sleep(self.duration)
+
+
+Playable = typing.Union[Show, Wait]
+
+
+class Animation(object):
+    def __init__(self):
+        self._steps: typing.List[Playable] = []
+
+    def then(self, step: Playable):
+        self._steps.append(step)
+        return self
+
+    def continue_with(self, step: Show):
+        if self._steps:
+            if self._steps[-1].clients != step.clients:
+                raise ValueError("continuation with different targets")
+            step.start = self._steps[-1].stop
+        self.then(step)
+        return self
+
+    def play(self):
+        for step in self._steps:
+            step.play()
 
 
 def send_show(from_top, from_back, to_top, to_back, duration, current_clients):
@@ -75,23 +146,21 @@ def send_show(from_top, from_back, to_top, to_back, duration, current_clients):
     get_all(urls)
 
 
-red = Color(255, 0, 0)
-green = Color(0, 255, 0)
-blue = Color(0, 0, 255)
-black = Color(0, 0, 0)
-
-
 @app.route('/demo')
 def demo():
+    animation = Animation()
     colors = [red, green, blue]
     for color in colors:
         for client in clients:
-            send_show(black, black, color, color, 500, [client])
-            send_show(color, color, black, black, 500, [client])
-            time.sleep(.01)
-    time.sleep(.5)
-    send_show(black, black, red, red, 1000, clients)
-    send_show(red, red, black, black, 1000, clients)
+            animation\
+                .then(Show(black, black).to(color, color).during(.1).on(client))\
+                .continue_with(Show().to(black, black).during(.1).on(client))\
+                .then(Wait(.1))
+    animation\
+        .then(Wait(.5))\
+        .then(Show(black, black).to(white, white).during(1).on(*clients))\
+        .continue_with(Show().to(black, black).during(1).on(*clients))
+    animation.play()
     return "demo executed"
 
 
@@ -111,7 +180,8 @@ if __name__ == '__main__':
             for index, line in enumerate(reg_backup):
                 client = line.strip()
                 print(f"#{index}: {client}")
-                if int(get(f'http://{client}').getcode()) == 200:
+                # TODO: activate guard
+                if True or int(get(f'http://{client}').getcode()) == 200:
                     clients.append(client)
                 else:
                     print(f"saved client {client} missing")
