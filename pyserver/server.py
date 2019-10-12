@@ -11,23 +11,14 @@ import os
 import typing
 
 
-def get(url):
+def get(url) -> typing.Tuple[int, str]:
     with urllib.request.urlopen(url) as response:
-        result = response
-    return result
-
-
-def get_all_sync(urls):
-    responses = [get(url) for url in urls]
-    return all([int(response.getcode()) == 200 for response in responses])
+        return int(response.getcode()), response.read().decode('utf-8')
 
 
 def get_all(urls):
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        start = time.perf_counter()
-        responses = executor.map(get, urls)
-        print(f"took {time.perf_counter() - start} secs to send")
-        return all([int(response.getcode()) == 200 for response in responses])
+        return executor.map(get, urls)
 
 
 app = Flask(__name__)
@@ -41,17 +32,27 @@ def hello_world():
 clients = []
 reg_backup_file = 'reg.txt'
 
+
 @app.route('/reg')
 def reg():
-    client = request.remote_addr
-    if client not in clients:
-        clients.append(client)
+    address = request.remote_addr
+    if address not in clients:
+        clients.append(address)
         with open(reg_backup_file, 'a') as reg_backup:
-            reg_backup.write(f'{client}\n')
-        print(f"Successful registration: {client} ({clients.index(client)}th client)")
+            reg_backup.write(f'{address}\n')
+        print(f"Successful registration: {address} ({clients.index(address)}th client)")
     else:
-        print(f"Clients already registered. ({clients.index(client)}th client)")
+        print(f"Clients already registered. ({clients.index(address)}th client)")
     return '', status.HTTP_200_OK
+
+
+def send_toggle():
+    print(f"toggling movement on {len(clients)} clients")
+    urls = []
+    for current in clients:
+        url = f'http://{current}/toggle'
+        urls.append(url)
+    return list(get_all(urls))
 
 
 class Color(object):
@@ -149,20 +150,48 @@ class Animation(object):
 
 @app.route('/demo')
 def demo():
+    print(send_toggle())
     animation = Animation()
     colors = [red, green, blue]
     for color in colors:
-        for client in clients:
+        for current in clients:
             animation\
-                .then(Show(black, black).to(color, color).during(.1).on(client))\
-                .continue_with(Show().to(black, black).during(.1).on(client))\
+                .then(Show(black, black).to(color, color).during(.1).on(current))\
+                .continue_with(Show().to(black, black).during(.1).on(current))\
                 .then(Wait(.1))
     animation\
         .then(Wait(.5))\
         .then(Show(black, black).to(white, white).during(1).on(*clients))\
         .continue_with(Show().to(black, black).during(1).on(*clients))
     animation.play()
-    return "demo executed"
+    print(send_toggle())
+    return 'demo executed'
+
+
+@app.route('/fast')
+def fast():
+    animation = Animation()
+    colors = [red, green, blue]
+    for color in colors * 10:
+        for current in clients:
+            animation\
+                .then(Show(black, black).to(color, color).during(.05).on(current))\
+                .continue_with(Show().to(black, black).during(.05).on(current))
+    animation.play()
+    return 'fast test executed'
+
+
+@app.route('/long')
+def long():
+    animation = Animation()
+    colors = [red, green, blue]
+    for color in colors:
+        for current in clients:
+            animation\
+                .then(Show(black, black).to(color, color).during(1).on(current))\
+                .continue_with(Show().to(black, black).during(1).on(current))
+    animation.play()
+    return 'long test executed'
 
 
 @app.route('/move')
@@ -184,7 +213,7 @@ if __name__ == '__main__':
                     continue
                 print(f"#{index}: {client}")
                 try:
-                    if int(get(f'http://{client}').getcode()) == 200:
+                    if int(get(f'http://{client}')[0]) == 200:
                         clients.append(client)
                     else:
                         print(f"saved client {client} missing")
@@ -196,4 +225,11 @@ if __name__ == '__main__':
         print("saving currently registered clients")
         reg_backup.write('\n'.join(clients))
         reg_backup.write('\n')
+
+    for current in clients:
+        response = ()
+        while response != (200, '1'):
+            response = get(f'http://{current}/toggle')
+            print(f'toggling movement on {current}: {response}')
+
     app.run(host='0.0.0.0', port=80, debug=True)
