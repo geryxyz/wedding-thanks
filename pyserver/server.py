@@ -1,5 +1,6 @@
 import time
 import urllib.request
+import urllib.error
 import concurrent.futures
 
 from flask import Flask
@@ -64,6 +65,17 @@ class Color(object):
         return f'#({self.r / 255}-{self.g / 255}-{self.b / 255})'
 
 
+def send_show(from_top, from_back, to_top, to_back, duration, current_clients):
+    print(f"sending show command to {len(current_clients)} clients")
+    urls = []
+    for current in current_clients:
+        url = f'http://{current}/show' \
+            f'?ftR={from_top.r}&ftG={from_top.g}&ftB={from_top.b}&ttR={to_top.r}&ttG={to_top.g}&ttB={to_top.b}' \
+            f'&fbR={from_back.r}&fbG={from_back.g}&fbB={from_back.b}&tbR={to_back.r}&tbG={to_back.g}&tbB={to_back.b}&d={duration}'
+        urls.append(url)
+    get_all(urls)
+
+
 red = Color(255, 0, 0)
 green = Color(0, 255, 0)
 blue = Color(0, 0, 255)
@@ -96,6 +108,7 @@ class Show(object):
     def play(self):
         # TODO: send it to clients
         print(self)
+        send_show(self.start[0], self.start[1], self.stop[0], self.stop[1], self.duration, self.clients)
 
 
 class Wait(object):
@@ -134,18 +147,6 @@ class Animation(object):
             step.play()
 
 
-def send_show(from_top, from_back, to_top, to_back, duration, current_clients):
-    print(f"sending show command to {len(current_clients)} clients")
-    urls = []
-    for client in current_clients:
-        url = f'http://{client}/show' \
-            f'?ftR={from_top.r}&ftG={from_top.g}&ftB={from_top.b}&ttR={to_top.r}&ttG={to_top.g}&ttB={to_top.b}' \
-            f'&fbR={from_back.r}&fbG={from_back.g}&fbB={from_back.b}&tbR={to_back.r}&tbG={to_back.g}&tbB={to_back.b}&d={duration}'
-        urls.append(url)
-        print(f"{from_top}|{from_back} --> {to_top}|{to_back}")
-    get_all(urls)
-
-
 @app.route('/demo')
 def demo():
     animation = Animation()
@@ -179,11 +180,15 @@ if __name__ == '__main__':
         with open(reg_backup_file, 'r') as reg_backup:
             for index, line in enumerate(reg_backup):
                 client = line.strip()
+                if client == '':
+                    continue
                 print(f"#{index}: {client}")
-                # TODO: activate guard
-                if True or int(get(f'http://{client}').getcode()) == 200:
-                    clients.append(client)
-                else:
+                try:
+                    if int(get(f'http://{client}').getcode()) == 200:
+                        clients.append(client)
+                    else:
+                        print(f"saved client {client} missing")
+                except urllib.error.URLError:
                     print(f"saved client {client} missing")
     else:
         print("there is not any back-up file present")
