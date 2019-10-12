@@ -306,10 +306,23 @@ void hToggleMeasurement() {
   Serial.print("Measurement: "); Serial.println(is_measurement_on);
 }
 
+float sensor_limit = .05;
+
+void hLimit() {
+  if (server.arg("l") != "") {
+    sensor_limit = server.arg("l").toFloat();
+    server.send(200, "text/plain", String(sensor_limit));
+  } else {
+    server.send(500, "text/plain", "");
+    Serial.println("missing arguments for setting a limit");
+  }
+}
+
 void init_http() {
   server.on("/", hRoot);
   server.on("/show", hShow);
   server.on("/toggle", hToggleMeasurement);
+  server.on("/limit", hLimit);
   server.begin();
   Serial.print("Registration with server ... ");
   http_client.begin("http://192.168.1.2/reg");
@@ -331,7 +344,7 @@ void init_http() {
   }
 }
 
-#define BOUNCING_LIMIT 3000
+#define BOUNCING_LIMIT 10000
 unsigned long last_movement = 0;
 
 void signalMovement() {
@@ -351,7 +364,7 @@ void signalMovement() {
        Serial.print("error: "); Serial.println(http_client.errorToString(status_code).c_str());
        Serial.print("WiFi status: "); Serial.println(WiFi.status()); 
     }
-    feedback(MOVEMENT_ERROR);
+    //feedback(MOVEMENT_ERROR);
     //ESP.restart();
   }
 }
@@ -371,8 +384,6 @@ void setup() {
   init_http();
 }
 
-#define SENSOR_LIMIT .1
-
 void loop() {
   server.handleClient();
   if (WiFi.status() != WL_CONNECTED) {
@@ -390,7 +401,7 @@ void loop() {
     Serial.print("deltaZ: "); Serial.print(deltaZ); Serial.print("\t");
     Serial.println();
   
-    if (ABS(deltaX) > SENSOR_LIMIT || ABS(deltaY) > SENSOR_LIMIT || ABS(deltaZ) > SENSOR_LIMIT) {
+    if (ABS(deltaX) > sensor_limit || ABS(deltaY) > sensor_limit || ABS(deltaZ) > sensor_limit) {
       signalMovement();
     }
   }

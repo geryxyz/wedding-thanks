@@ -148,9 +148,7 @@ class Animation(object):
             step.play()
 
 
-@app.route('/demo')
-def demo():
-    print(send_toggle())
+def play_demo():
     animation = Animation()
     colors = [red, green, blue]
     for color in colors:
@@ -164,7 +162,11 @@ def demo():
         .then(Show(black, black).to(white, white).during(1).on(*clients))\
         .continue_with(Show().to(black, black).during(1).on(*clients))
     animation.play()
-    print(send_toggle())
+
+
+@app.route('/demo')
+def demo():
+    play_demo()
     return 'demo executed'
 
 
@@ -198,6 +200,10 @@ def long():
 def moved():
     client = request.remote_addr
     if client in clients:
+        print(f"the {clients.index(client)}th client is registered a movement")
+        print(send_toggle())
+        play_demo()
+        print(send_toggle())
         return '', status.HTTP_200_OK
     else:
         return '', status.HTTP_500_INTERNAL_SERVER_ERROR
