@@ -10,6 +10,9 @@ from flask_api import status
 import os
 import typing
 
+from pyserver.color import Color, red, green, blue, white, black
+import pyserver.girl_on_fire
+
 
 def get(url) -> typing.Tuple[int, str]:
     with urllib.request.urlopen(url) as response:
@@ -55,17 +58,6 @@ def send_toggle():
     return list(get_all(urls))
 
 
-class Color(object):
-    def __init__(self, r, g, b):
-        super().__init__()
-        self.r = r
-        self.g = g
-        self.b = b
-
-    def __str__(self):
-        return f'#({self.r / 255}-{self.g / 255}-{self.b / 255})'
-
-
 def send_show(from_top, from_back, to_top, to_back, duration, current_clients):
     print(f"sending show command to {len(current_clients)} clients")
     urls = []
@@ -75,13 +67,6 @@ def send_show(from_top, from_back, to_top, to_back, duration, current_clients):
             f'&fbR={from_back.r}&fbG={from_back.g}&fbB={from_back.b}&tbR={to_back.r}&tbG={to_back.g}&tbB={to_back.b}&d={duration}'
         urls.append(url)
     get_all(urls)
-
-
-red = Color(255, 0, 0)
-green = Color(0, 255, 0)
-blue = Color(0, 0, 255)
-black = Color(0, 0, 0)
-white = Color(255, 255, 255)
 
 
 class Show(object):

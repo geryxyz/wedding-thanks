@@ -32,3 +32,4 @@
 *.app
 
 reg.txt
+__pycache__/
