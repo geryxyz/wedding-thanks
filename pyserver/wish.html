@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Küldj egy kívánságot!</title>
+    <style type="text/css">
+        .header {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Küldj egy kívánságot!</h1>
+    <form method="get" action="/exec">
+        <textarea name="wish" style="width: 99%; height: 10ex" onfocus="if (this.value == 'kívánság vagy üzenet') this.value=''">kívánság vagy üzenet</textarea><br/>
+        <div style="float:right">
+            <span class="header">aláírás: </span>
+            <input type="text" name="name" /><br/>
+        </div>
+        <select name="animation">
+            <option value="demo">Demo animáció</option>
+        </select>
+        <input type="submit" style="width:100%" />
+    </form>
+</body>
+</html>

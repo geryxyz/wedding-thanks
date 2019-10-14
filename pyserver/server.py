@@ -9,6 +9,7 @@ from flask_api import status
 
 import os
 import typing
+import codecs
 
 from pyserver.color import Color, red, green, blue, white, black
 import pyserver.girl_on_fire
@@ -192,6 +193,19 @@ def moved():
         return '', status.HTTP_200_OK
     else:
         return '', status.HTTP_500_INTERNAL_SERVER_ERROR
+
+
+@app.route('/wish')
+def user_interface():
+    with codecs.open('wish.html', 'r', encoding='utf-8') as page:
+        content = page.read()
+        return content, status.HTTP_200_OK
+
+
+@app.route('/exec')
+def exec():
+    print(list(request.args.items()))
+    return str(list(request.args.items()))
 
 
 if __name__ == '__main__':
