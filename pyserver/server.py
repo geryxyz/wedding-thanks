@@ -227,8 +227,9 @@ def demo_ani():
         .then(Wait(.5)) \
         .then(From(black, black).to(white, white).during(1).on(*clients)) \
         .continue_with(From().to(black, black).during(1).on(*clients)) \
-        .then(Wait(.5)) \
-        .then(Display()
+        .then(Wait(.5))
+    if len(clients) > 2:
+        demo_animation.then(Display()
               .start(black, black).stop(red, red).on(clients[0])
               .start(black, black).stop(green, green).on(clients[1])
               .start(black, black).stop(blue, blue).on(clients[2])
