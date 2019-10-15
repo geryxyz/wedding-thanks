@@ -11,6 +11,7 @@ from flask_api import status
 import os
 import typing
 import codecs
+import winsound
 
 from pyserver.color import Color, red, green, blue, white, black
 import pyserver.girl_on_fire
@@ -46,8 +47,12 @@ def reg():
         with open(reg_backup_file, 'a') as reg_backup:
             reg_backup.write(f'{address}\n')
         print(f"Successful registration: {address} ({clients.index(address)}th client)")
+        winsound.Beep(1000, 300)
+        winsound.Beep(3000, 100)
     else:
         print(f"Clients already registered. ({clients.index(address)}th client)")
+        winsound.Beep(500, 500)
+        winsound.Beep(300, 1000)
     return '', status.HTTP_200_OK
 
 
@@ -61,7 +66,7 @@ def send_toggle():
 
 
 def send_show(from_top, from_back, to_top, to_back, duration, current_clients):
-    print(f"sending show command to {len(current_clients)} clients")
+    # print(f"sending show command to {len(current_clients)} clients")
     urls = []
     for current in current_clients:
         url = f'http://{current}/show' \
@@ -94,8 +99,7 @@ class Show(object):
         return f'{" | ".join(map(str, self.start))} [ {self.duration / 1000} s ] {" | ".join(map(str, self.stop))} on {" , ".join(self.clients)}'
 
     def play(self):
-        # TODO: send it to clients
-        print(self)
+        # print(self)
         send_show(self.start[0], self.start[1], self.stop[0], self.stop[1], self.duration, self.clients)
 
 
@@ -107,7 +111,7 @@ class Wait(object):
         return f'waiting {self.duration} s'
 
     def play(self):
-        print(self)
+        # print(self)
         time.sleep(self.duration)
 
 
@@ -183,8 +187,20 @@ def long():
     return 'long test executed'
 
 
+last_moved = None
+bouncing_limit = 20
+
+
 @app.route('/move')
 def moved():
+    global last_moved
+    if isinstance(last_moved, float):
+        past_time = time.perf_counter() - last_moved
+        print(f"{past_time} seconds past since last move")
+        if past_time < bouncing_limit:
+            print(f"ignoring movement, {bouncing_limit - past_time} seconds left")
+            return '', status.HTTP_200_OK
+    last_moved = time.perf_counter()
     client = request.remote_addr
     if client in clients:
         print(f"the {clients.index(client)}th client is registered a movement")
@@ -246,5 +262,7 @@ if __name__ == '__main__':
         while response != (200, '1'):
             response = get(f'http://{current}/toggle')
             print(f'toggling movement on {current}: {response}')
+        response = get(f'http://{current}/limit?l=0.1')
+        print(f'setting limit for {current} to {response}')
 
     app.run(host='0.0.0.0', port=80, debug=True)
