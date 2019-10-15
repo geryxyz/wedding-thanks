@@ -1,4 +1,5 @@
 import time
+import datetime
 import urllib.request
 import urllib.error
 import concurrent.futures
@@ -195,17 +196,26 @@ def moved():
         return '', status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
-@app.route('/wish')
-def user_interface():
-    with codecs.open('wish.html', 'r', encoding='utf-8') as page:
+def serve_file(file_name):
+    with codecs.open(file_name, 'r', encoding='utf-8') as page:
         content = page.read()
         return content, status.HTTP_200_OK
 
 
+@app.route('/wish')
+def user_interface():
+    return serve_file('wish.html')
+
+
 @app.route('/exec')
 def exec():
-    print(list(request.args.items()))
-    return str(list(request.args.items()))
+    wish = request.args.get('wish')
+    name = request.args.get('name')
+    if wish is not None and name is not None:
+        with codecs.open('wishes.txt', 'a') as wishes:
+            wishes.write(f'{datetime.datetime.now()}\t{wish}\t{name}\t{request.remote_addr}\n')
+    # TODO: send selected animation
+    return serve_file('exec.html')
 
 
 if __name__ == '__main__':

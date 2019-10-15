@@ -8,19 +8,33 @@
             font-weight: bold;
         }
     </style>
+    <script lang="javascript">
+        function validate() {
+            var wish = document.getElementById('wish').value;
+            var name = document.getElementById('name').value;
+            var test = (wish != 'kívánság vagy üzenet' && wish != '' && wish != null) && (name != '' && name != null);
+            if (!test) alert('Név és üzenet/kívánság kötelező!');
+            return test;
+        }
+    </script>
 </head>
 <body>
     <h1>Küldj egy kívánságot!</h1>
-    <form method="get" action="/exec">
-        <textarea name="wish" style="width: 99%; height: 10ex" onfocus="if (this.value == 'kívánság vagy üzenet') this.value=''">kívánság vagy üzenet</textarea><br/>
+    <form method="get" action="/exec" onsubmit="return validate()">
+        <textarea
+            id="wish"
+            name="wish"
+            style="width: 99%; height: 10ex"
+            onfocus="if (this.value == 'kívánság vagy üzenet') this.value=''"
+        >kívánság vagy üzenet</textarea><br/>
         <div style="float:right">
             <span class="header">aláírás: </span>
-            <input type="text" name="name" /><br/>
+            <input id="name" type="text" name="name" /><br/>
         </div>
         <select name="animation">
             <option value="demo">Demo animáció</option>
         </select>
-        <input type="submit" style="width:100%" />
+        <input id="submit" type="submit" style="width:100%" />
     </form>
 </body>
 </html>
