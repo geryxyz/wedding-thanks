@@ -393,6 +393,7 @@ void loop() {
     }
   }
 
+  //TODO: debug / remove client side bouncing elimination
   if (accel_num != 0 && is_measurement_on && (millis() - last_movement > BOUNCING_LIMIT)) {
     float deltaX, deltaY, deltaZ;
     measure_delta(deltaX, deltaY, deltaZ);

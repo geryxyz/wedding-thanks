@@ -13,6 +13,7 @@ import typing
 import codecs
 import winsound
 import random
+import collections
 
 from pyserver.color import Color, red, green, blue, white, black
 import pyserver.girl_on_fire
@@ -76,7 +77,6 @@ def send_toggle():
 
 
 def send_show(from_top, from_back, to_top, to_back, duration, current_clients):
-    # print(f"sending show command to {len(current_clients)} clients")
     urls = []
     for current in current_clients:
         url = f'http://{current}/show' \
@@ -86,7 +86,22 @@ def send_show(from_top, from_back, to_top, to_back, duration, current_clients):
     get_all(urls)
 
 
-class Show(object):
+ShowEntry = collections.namedtuple('ShowEntry', 'from_top from_back to_top to_back client')
+
+
+def send_show_per_client(entries: typing.List[ShowEntry], duration: int):
+    urls = []
+    for current in entries:
+        url = f'http://{current.client}/show' \
+            f'?ftR={current.from_top.r}&ftG={current.from_top.g}&ftB={current.from_top.b}' \
+            f'&ttR={current.to_top.r}&ttG={current.to_top.g}&ttB={current.to_top.b}' \
+            f'&fbR={current.from_back.r}&fbG={current.from_back.g}&fbB={current.from_back.b}' \
+            f'&tbR={current.to_back.r}&tbG={current.to_back.g}&tbB={current.to_back.b}&d={duration}'
+        urls.append(url)
+    get_all(urls)
+
+
+class From(object):
     def __init__(self, front: Color = black, back: Color = black):
         self.start = (front, back)
         self.stop = (black, black)
@@ -113,6 +128,50 @@ class Show(object):
         send_show(self.start[0], self.start[1], self.stop[0], self.stop[1], self.duration, self.clients)
 
 
+class Display(object):
+    def __init__(self):
+        self._assignments = {}
+        self._start = None
+        self._stop = None
+        self._client = None
+        self._duration = None
+
+    def start(self, top: Color, back: Color):
+        self._start = (top, back)
+        self._assign()
+        return self
+
+    def stop(self, top: Color, back: Color):
+        self._stop = (top, back)
+        self._assign()
+        return self
+
+    def on(self, client: str):
+        self._client = client
+        self._assign()
+        return self
+
+    def _assign(self):
+        if self._start is not None and self._stop is not None and self._client is not None:
+            self._assignments[self._client] = ShowEntry(
+                from_top=self._start[0],
+                from_back=self._start[1],
+                to_top=self._stop[0],
+                to_back=self._stop[1],
+                client=self._client
+            )
+            self._start = None
+            self._stop = None
+            self._client = None
+
+    def during(self, seconds: float):
+        self._duration = int(seconds * 1000)
+        return self
+
+    def play(self):
+        send_show_per_client(list(self._assignments.values()), self._duration)
+
+
 class Wait(object):
     def __init__(self, duration: float):
         self.duration = duration
@@ -125,7 +184,7 @@ class Wait(object):
         time.sleep(self.duration)
 
 
-Playable = typing.Union[Show, Wait]
+Playable = typing.Union[From, Wait, Display]
 
 
 class Animation(object):
@@ -136,7 +195,7 @@ class Animation(object):
         self._steps.append(step)
         return self
 
-    def continue_with(self, step: Show):
+    def continue_with(self, step: From):
         if self._steps:
             if self._steps[-1].clients != step.clients:
                 raise ValueError("continuation with different targets")
@@ -152,7 +211,7 @@ class Animation(object):
         self.play()
 
 
-animations: Animation = {}
+animations: typing.Dict[str, Animation] = {}
 
 
 def demo_ani():
@@ -161,20 +220,35 @@ def demo_ani():
     for color in colors:
         for current in clients:
             demo_animation \
-                .then(Show(black, black).to(color, color).during(.1).on(current)) \
-                .continue_with(Show().to(black, black).during(.1).on(current)) \
+                .then(From(black, black).to(color, color).during(.1).on(current)) \
+                .continue_with(From().to(black, black).during(.1).on(current)) \
                 .then(Wait(.1))
     demo_animation \
         .then(Wait(.5)) \
-        .then(Show(black, black).to(white, white).during(1).on(*clients)) \
-        .continue_with(Show().to(black, black).during(1).on(*clients))
+        .then(From(black, black).to(white, white).during(1).on(*clients)) \
+        .continue_with(From().to(black, black).during(1).on(*clients)) \
+        .then(Wait(.5)) \
+        .then(Display()
+              .start(black, black).stop(red, red).on(clients[0])
+              .start(black, black).stop(green, green).on(clients[1])
+              .start(black, black).stop(blue, blue).on(clients[2])
+              .during(1)) \
+        .then(Display()
+              .start(red, red).stop(black, black).on(clients[0])
+              .start(green, green).stop(black, black).on(clients[1])
+              .start(blue, blue).stop(black, black).on(clients[2])
+              .during(1))
     return demo_animation
 
 
-def glow_ani(color):
+def glow_ani(color: Color):
     return Animation() \
-        .then(Show(black, black).to(color, color).during(1.5).on(*clients)) \
-        .continue_with(Show().to(black, black).during(1.5).on(*clients))
+        .then(From(black, black).to(color, color).during(1.5).on(*clients)) \
+        .continue_with(From().to(black, black).during(1.5).on(*clients))
+
+
+def field_ani(colors: typing.List[Color]):
+    pass
 
 
 def init_animations():
@@ -210,9 +284,9 @@ def fast():
     colors = [red, green, blue]
     for color in colors * 10:
         for current in clients:
-            animation\
-                .then(Show(black, black).to(color, color).during(.05).on(current))\
-                .continue_with(Show().to(black, black).during(.05).on(current))
+            animation \
+                .then(From(black, black).to(color, color).during(.05).on(current)) \
+                .continue_with(From().to(black, black).during(.05).on(current))
     animation.play()
     return 'fast test executed'
 
@@ -223,9 +297,9 @@ def long():
     colors = [red, green, blue]
     for color in colors:
         for current in clients:
-            animation\
-                .then(Show(black, black).to(color, color).during(1).on(current))\
-                .continue_with(Show().to(black, black).during(1).on(current))
+            animation \
+                .then(From(black, black).to(color, color).during(1).on(current)) \
+                .continue_with(From().to(black, black).during(1).on(current))
     animation.play()
     return 'long test executed'
 
@@ -247,9 +321,9 @@ def moved():
     client = request.remote_addr
     if client in clients:
         print(f"the {clients.index(client)}th client is registered a movement")
-        print(send_toggle())
+        #print(send_toggle())
         animations['demo'].play()
-        print(send_toggle())
+        #print(send_toggle())
         return '', status.HTTP_200_OK
     else:
         return '', status.HTTP_500_INTERNAL_SERVER_ERROR
