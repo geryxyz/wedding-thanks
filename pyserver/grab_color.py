@@ -24,11 +24,16 @@ def simplify(text: str) -> str:
     return re.sub(r'[\W]+', '_', text).lower()
 
 
+def quote(text: str):
+    return f"'{text}'"
+
+
 client = colourlovers.ColourLovers()
 for id in ids:
     print(f"fetching {int(id)} ... ", end='')
     palette = client.palette(int(id))[0]
     print(palette.title)
+    collected_colors = []
     with open(f'{simplify(palette.title)}.py', 'w') as colors:
         colors.write('from pyserver.color import Color\n')
         colors.write(f'# {palette.title} {palette.url}\n')
@@ -37,8 +42,10 @@ for id in ids:
             color = client.color(hex)[0]
             print(color.title)
             name = simplify(color.title)
+            collected_colors.append(name)
             components = HTMLColorToRGB(hex[1:])
             gamma_components = [gamma_correction(c) for c in components]
             print(f'\t{components} --> {gamma_components}')
             colors.write(f'{name} = Color({", ".join(map(str, gamma_components))})\n')
         colors.write('\n')
+        colors.write(f'palette = [{", ".join(collected_colors)}]\n')

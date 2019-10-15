@@ -12,9 +12,13 @@ import os
 import typing
 import codecs
 import winsound
+import random
 
 from pyserver.color import Color, red, green, blue, white, black
 import pyserver.girl_on_fire
+import pyserver.crystal
+import pyserver.ice
+import pyserver.blue_apple
 
 
 def get(url) -> typing.Tuple[int, str]:
@@ -39,6 +43,10 @@ clients = []
 reg_backup_file = 'reg.txt'
 
 
+def client_ring(index):
+    return clients[index % len(clients)]
+
+
 @app.route('/reg')
 def reg():
     address = request.remote_addr
@@ -49,6 +57,8 @@ def reg():
         print(f"Successful registration: {address} ({clients.index(address)}th client)")
         winsound.Beep(1000, 300)
         winsound.Beep(3000, 100)
+        response = get(f'http://{address}/limit?l=0.1')
+        print(f'setting limit for {address} to {response}')
     else:
         print(f"Clients already registered. ({clients.index(address)}th client)")
         winsound.Beep(500, 500)
@@ -138,26 +148,59 @@ class Animation(object):
         for step in self._steps:
             step.play()
 
+    def __call__(self, *args, **kwargs):
+        self.play()
 
-def play_demo():
-    animation = Animation()
+
+animations: Animation = {}
+
+
+def demo_ani():
+    demo_animation = Animation()
     colors = [red, green, blue]
     for color in colors:
         for current in clients:
-            animation\
-                .then(Show(black, black).to(color, color).during(.1).on(current))\
-                .continue_with(Show().to(black, black).during(.1).on(current))\
+            demo_animation \
+                .then(Show(black, black).to(color, color).during(.1).on(current)) \
+                .continue_with(Show().to(black, black).during(.1).on(current)) \
                 .then(Wait(.1))
-    animation\
-        .then(Wait(.5))\
-        .then(Show(black, black).to(white, white).during(1).on(*clients))\
+    demo_animation \
+        .then(Wait(.5)) \
+        .then(Show(black, black).to(white, white).during(1).on(*clients)) \
         .continue_with(Show().to(black, black).during(1).on(*clients))
-    animation.play()
+    return demo_animation
+
+
+def glow_ani(color):
+    return Animation() \
+        .then(Show(black, black).to(color, color).during(1.5).on(*clients)) \
+        .continue_with(Show().to(black, black).during(1.5).on(*clients))
+
+
+def init_animations():
+    animations['demo'] = demo_ani()
+    animations['blessing'] = glow_ani(white)
+    animations['peace'] = lambda: glow_ani(random.choice(pyserver.crystal.palette)).play()
+    animations['safety'] = lambda: glow_ani(random.choice([
+        pyserver.blue_apple.blue_orange,
+        pyserver.blue_apple.blue_yellow,
+        pyserver.blue_apple.new_stones
+    ])).play()
+
+
+@app.route('/play')
+def play():
+    selected = request.args.get('animation')
+    if selected in animations:
+        animations[selected]()
+        return f'playing {selected}'
+    else:
+        return f'missing animation: {selected}'
 
 
 @app.route('/demo')
 def demo():
-    play_demo()
+    animations['demo'].play()
     return 'demo executed'
 
 
@@ -205,7 +248,7 @@ def moved():
     if client in clients:
         print(f"the {clients.index(client)}th client is registered a movement")
         print(send_toggle())
-        play_demo()
+        animations['demo'].play()
         print(send_toggle())
         return '', status.HTTP_200_OK
     else:
@@ -234,7 +277,7 @@ def exec():
     return serve_file('exec.html')
 
 
-if __name__ == '__main__':
+def load_back_up():
     if os.path.isfile(reg_backup_file):
         print("reloading clients from back-up")
         with open(reg_backup_file, 'r') as reg_backup:
@@ -257,6 +300,8 @@ if __name__ == '__main__':
         reg_backup.write('\n'.join(clients))
         reg_backup.write('\n')
 
+
+def init_clients():
     for current in clients:
         response = ()
         while response != (200, '1'):
@@ -264,5 +309,11 @@ if __name__ == '__main__':
             print(f'toggling movement on {current}: {response}')
         response = get(f'http://{current}/limit?l=0.1')
         print(f'setting limit for {current} to {response}')
+
+
+if __name__ == '__main__':
+    load_back_up()
+    init_animations()
+    init_clients()
 
     app.run(host='0.0.0.0', port=80, debug=True)
