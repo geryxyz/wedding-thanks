@@ -3,6 +3,7 @@ import datetime
 import urllib.request
 import urllib.error
 import concurrent.futures
+import threading
 
 from flask import Flask
 from flask import request
@@ -58,8 +59,8 @@ def reg():
         print(f"Successful registration: {address} ({clients.index(address)}th client)")
         winsound.Beep(1000, 300)
         winsound.Beep(3000, 100)
-        response = get(f'http://{address}/limit?l=0.1')
-        print(f'setting limit for {address} to {response}')
+        #response = get(f'http://{address}/limit?l=0.1')
+        #print(f'setting limit for {address} to {response}')
     else:
         print(f"Clients already registered. ({clients.index(address)}th client)")
         winsound.Beep(500, 500)
@@ -329,7 +330,6 @@ last_moved = None
 bouncing_limit = 20
 
 
-@app.route('/move')
 def moved():
     global last_moved
     if isinstance(last_moved, float):
@@ -337,14 +337,21 @@ def moved():
         print(f"{past_time} seconds past since last move")
         if past_time < bouncing_limit:
             print(f"ignoring movement, {bouncing_limit - past_time} seconds left")
-            return '', status.HTTP_200_OK
+            return
     last_moved = time.perf_counter()
+    # print(send_toggle())
+    print(f"playing animation")
+    animations['demo']().play()
+    # print(send_toggle())
+
+
+@app.route('/move')
+def move():
     client = request.remote_addr
     if client in clients:
         print(f"the {clients.index(client)}th client is registered a movement")
-        #print(send_toggle())
-        animations['demo'].play()
-        #print(send_toggle())
+        thread = threading.Thread(target=moved)
+        thread.start()
         return '', status.HTTP_200_OK
     else:
         return '', status.HTTP_500_INTERNAL_SERVER_ERROR
