@@ -130,13 +130,13 @@ class From(object):
 
 class Display(object):
     def __init__(self):
-        self._assignments = {}
+        self._assignments: typing.Dict[str, ShowEntry] = {}
         self._start = None
         self._stop = None
         self._client = None
         self._duration = None
 
-    def start(self, top: Color, back: Color):
+    def start(self, top: Color = black, back: Color = black):
         self._start = (top, back)
         self._assign()
         return self
@@ -188,18 +188,31 @@ Playable = typing.Union[From, Wait, Display]
 
 
 class Animation(object):
-    def __init__(self):
+    def __init__(self, hungarian_name='Névtelen animáció'):
         self._steps: typing.List[Playable] = []
+        self.hungarian_name = hungarian_name
 
     def then(self, step: Playable):
         self._steps.append(step)
         return self
 
-    def continue_with(self, step: From):
+    def continue_with(self, step: typing.Union[From, Display]):
         if self._steps:
-            if self._steps[-1].clients != step.clients:
-                raise ValueError("continuation with different targets")
-            step.start = self._steps[-1].stop
+            last_step = self._steps[-1]
+            if isinstance(step, From) and isinstance(last_step, From):
+                if last_step.clients != step.clients:
+                    raise ValueError("continuation with different targets")
+                step.start = last_step.stop
+            elif isinstance(step, Display) and isinstance(last_step, Display):
+                for client, last_assignment in last_step._assignments.items():
+                    if client in step._assignments:
+                        current_assignment = step._assignments[client]
+                        step._assignments[client] = ShowEntry(
+                            last_assignment.to_top, last_assignment.to_back,
+                            current_assignment.to_top, current_assignment.to_back,
+                            client)
+                    else:
+                        raise ValueError("continuation with different targets")
         self.then(step)
         return self
 
@@ -208,14 +221,21 @@ class Animation(object):
             step.play()
 
     def __call__(self, *args, **kwargs):
-        self.play()
+        return self
 
 
 animations: typing.Dict[str, Animation] = {}
 
 
+def animations_html_option():
+    options = []
+    for name, animation in animations.items():
+        options.append(f'<option value="{name}">{animation().hungarian_name}</option>')
+    return '\n'.join(options)
+
+
 def demo_ani():
-    demo_animation = Animation()
+    demo_animation = Animation(hungarian_name='Demo animáció')
     colors = [red, green, blue]
     for color in colors:
         for current in clients:
@@ -234,7 +254,7 @@ def demo_ani():
               .start(black, black).stop(green, green).on(clients[1])
               .start(black, black).stop(blue, blue).on(clients[2])
               .during(1)) \
-        .then(Display()
+        .continue_with(Display()
               .start(red, red).stop(black, black).on(clients[0])
               .start(green, green).stop(black, black).on(clients[1])
               .start(blue, blue).stop(black, black).on(clients[2])
@@ -242,8 +262,8 @@ def demo_ani():
     return demo_animation
 
 
-def glow_ani(color: Color):
-    return Animation() \
+def glow_ani(color: Color, hungarian_name):
+    return Animation(hungarian_name=hungarian_name) \
         .then(From(black, black).to(color, color).during(1.5).on(*clients)) \
         .continue_with(From().to(black, black).during(1.5).on(*clients))
 
@@ -254,20 +274,20 @@ def field_ani(colors: typing.List[Color]):
 
 def init_animations():
     animations['demo'] = demo_ani()
-    animations['blessing'] = glow_ani(white)
-    animations['peace'] = lambda: glow_ani(random.choice(pyserver.crystal.palette)).play()
+    animations['blessing'] = glow_ani(white, 'Áldás animáció')
+    animations['peace'] = lambda: glow_ani(random.choice(pyserver.crystal.palette), 'Béke animáció')
     animations['safety'] = lambda: glow_ani(random.choice([
         pyserver.blue_apple.blue_orange,
         pyserver.blue_apple.blue_yellow,
         pyserver.blue_apple.new_stones
-    ])).play()
+    ]), 'Biztonság animáció')
 
 
 @app.route('/play')
 def play():
     selected = request.args.get('animation')
     if selected in animations:
-        animations[selected]()
+        animations[selected]().play()
         return f'playing {selected}'
     else:
         return f'missing animation: {selected}'
@@ -330,15 +350,15 @@ def moved():
         return '', status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
-def serve_file(file_name):
+def serve_file(file_name) -> str:
     with codecs.open(file_name, 'r', encoding='utf-8') as page:
         content = page.read()
-        return content, status.HTTP_200_OK
+        return content
 
 
 @app.route('/wish')
 def user_interface():
-    return serve_file('wish.html')
+    return serve_file('wish.html').replace('<option value="demo">Demo animáció</option>', animations_html_option()), status.HTTP_200_OK
 
 
 @app.route('/exec')
@@ -349,7 +369,7 @@ def exec():
         with codecs.open('wishes.txt', 'a') as wishes:
             wishes.write(f'{datetime.datetime.now()}\t{wish}\t{name}\t{request.remote_addr}\n')
     # TODO: send selected animation
-    return serve_file('exec.html')
+    return serve_file('exec.html'), status.HTTP_200_OK
 
 
 def load_back_up():
