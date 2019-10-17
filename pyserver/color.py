@@ -8,6 +8,12 @@ class Color(object):
     def __str__(self):
         return f'#({self.r / 255}-{self.g / 255}-{self.b / 255})'
 
+    def __mul__(self, other: float):
+        return Color(
+            int(self.r * other),
+            int(self.g * other),
+            int(self.b * other))
+
 
 red = Color(255, 0, 0)
 green = Color(0, 255, 0)

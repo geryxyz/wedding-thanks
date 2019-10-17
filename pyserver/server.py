@@ -204,8 +204,12 @@ class Animation(object):
         return self
 
     def continue_with(self, step: typing.Union[From, Display]):
-        if self._steps:
-            last_step = self._steps[-1]
+        last_step = None
+        for candidate_step in self._steps[::-1]:
+            if not isinstance(candidate_step, Wait):
+                last_step = candidate_step
+                break
+        if last_step is not None:
             if isinstance(step, From) and isinstance(last_step, From):
                 if last_step.clients != step.clients:
                     raise ValueError("continuation with different targets")
@@ -224,14 +228,13 @@ class Animation(object):
         return self
 
     def play(self):
-        for step in self._steps:
-            step.play()
-
-    def __call__(self, *args, **kwargs):
-        return self
+        with animation_lock:
+            for step in self._steps:
+                step.play()
 
 
-animations: typing.Dict[str, Animation] = {}
+animation_lock = threading.Lock()
+animations: typing.Dict[str, typing.Callable[[], Animation]] = {}
 
 
 def animations_html_option():
@@ -316,8 +319,37 @@ def field_ani(colors: typing.List[Color], cycle: int, duration: float, hungarian
     return field_animation
 
 
+def round_about(particle_color: Color, trace_color: Color, trace_length: int, trace_fadding_factor: float, cycle: int, duration: float, hungarian_name):
+    round_about_animation = Animation(hungarian_name=hungarian_name)
+    if len(clients) > 4:
+        duration_per_cycle = duration / (cycle + 1)
+        for i in range(cycle):
+            step = Display().start().stop(particle_color, particle_color).on(clients[ring_index(i)])
+            if trace_length > 4:
+                raise ValueError("trace max length is 4")
+            current_trace_color = trace_color
+            for j in range(1, 5):
+                if j <= trace_length:
+                    step.start().stop(current_trace_color, current_trace_color).on(clients[ring_index(i - j)])
+                    current_trace_color = current_trace_color * trace_fadding_factor
+                else:
+                    step.start().stop(black, black).on(clients[ring_index(i - j)])
+            step.during(duration_per_cycle)
+            round_about_animation.continue_with(step)
+            # round_about_animation.then(Wait(duration_per_cycle * .5))
+        round_about_animation.continue_with(Display()
+            .start().stop(black, black).on(clients[0])
+            .start().stop(black, black).on(clients[1])
+            .start().stop(black, black).on(clients[2])
+            .start().stop(black, black).on(clients[3])
+            .start().stop(black, black).on(clients[4])
+            .during(duration_per_cycle))
+    return round_about_animation
+
+
 def init_animations():
     animations['demo'] = demo_ani
+
     animations['blessing'] = lambda: glow_ani(white, 'Áldás animáció')
     animations['peace'] = lambda: glow_ani(random.choice(pyserver.crystal.palette), 'Béke animáció')
     animations['safety'] = lambda: glow_ani(random.choice([
@@ -325,16 +357,32 @@ def init_animations():
         pyserver.blue_apple.blue_yellow,
         pyserver.blue_apple.new_stones
     ]), 'Biztonság animáció')
-    animations['fire'] = lambda: field_ani(pyserver.girl_on_fire.palette, duration=5, cycle=10, hungarian_name='Tűz animáció')
-    animations['ice'] = lambda: field_ani(pyserver.ice.palette, duration=5, cycle=10, hungarian_name='Jég animáció')
-    animations['forest'] = lambda: field_ani(pyserver.environment_friendly.palette, duration=5, cycle=10, hungarian_name='Zöld erdő animáció')
+
+    animations['fire'] = lambda: field_ani(
+        pyserver.girl_on_fire.palette,
+        duration=5, cycle=10,
+        hungarian_name='Tűz animáció')
+    animations['ice'] = lambda: field_ani(
+        pyserver.ice.palette,
+        duration=5, cycle=10,
+        hungarian_name='Jég animáció')
+    animations['forest'] = lambda: field_ani(
+        pyserver.environment_friendly.palette,
+        duration=5, cycle=10,
+        hungarian_name='Zöld erdő animáció')
+
+    animations['comet'] = lambda: round_about(
+        particle_color=white, trace_color=cyan * .5,
+        trace_length=2, trace_fadding_factor=.3,
+        cycle=10, duration=5,
+        hungarian_name='Üstökös animáció')
 
 
 @app.route('/play')
 def play():
     selected = request.args.get('animation')
     if selected in animations:
-        animations[selected]().play()
+        threading.Thread(target=animations[selected]().play).start()
         return f'playing {selected}'
     else:
         return f'missing animation: {selected}'
@@ -430,6 +478,8 @@ def init_clients():
             response = get(f'http://{current}/toggle')
             print(f'toggling movement on {current}: {response}')
         set_limit_on(current)
+    send_show(black, black, white, white, 1000, clients)
+    send_show(white, white, black, black, 1000, clients)
 
 
 if __name__ == '__main__':
