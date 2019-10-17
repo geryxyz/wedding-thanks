@@ -16,11 +16,12 @@ import winsound
 import random
 import collections
 
-from pyserver.color import Color, red, green, blue, white, black
+from pyserver.color import Color, red, green, blue, white, black, yellow, cyan
 import pyserver.girl_on_fire
 import pyserver.crystal
 import pyserver.ice
 import pyserver.blue_apple
+import pyserver.environment_friendly
 
 
 def get(url) -> typing.Tuple[int, str]:
@@ -45,8 +46,13 @@ clients = []
 reg_backup_file = 'reg.txt'
 
 
-def client_ring(index):
-    return clients[index % len(clients)]
+def ring_index(index) -> int:
+    return index % len(clients)
+
+
+def set_limit_on(address: str, limit: float=.1):
+    response = get(f'http://{address}/limit?l={limit}')
+    print(f'setting limit for {address} to {response}')
 
 
 @app.route('/reg')
@@ -57,10 +63,10 @@ def reg():
         with open(reg_backup_file, 'a') as reg_backup:
             reg_backup.write(f'{address}\n')
         print(f"Successful registration: {address} ({clients.index(address)}th client)")
+        thread = threading.Thread(target=set_limit_on, args=[address])
+        thread.start()
         winsound.Beep(1000, 300)
         winsound.Beep(3000, 100)
-        #response = get(f'http://{address}/limit?l=0.1')
-        #print(f'setting limit for {address} to {response}')
     else:
         print(f"Clients already registered. ({clients.index(address)}th client)")
         winsound.Beep(500, 500)
@@ -249,17 +255,29 @@ def demo_ani():
         .then(From(black, black).to(white, white).during(1).on(*clients)) \
         .continue_with(From().to(black, black).during(1).on(*clients)) \
         .then(Wait(.5))
-    if len(clients) > 2:
+    if len(clients) > 4:
         demo_animation.then(Display()
               .start(black, black).stop(red, red).on(clients[0])
-              .start(black, black).stop(green, green).on(clients[1])
-              .start(black, black).stop(blue, blue).on(clients[2])
-              .during(1)) \
-        .continue_with(Display()
-              .start(red, red).stop(black, black).on(clients[0])
-              .start(green, green).stop(black, black).on(clients[1])
-              .start(blue, blue).stop(black, black).on(clients[2])
+              .start(black, black).stop(yellow, yellow).on(clients[1])
+              .start(black, black).stop(green, green).on(clients[2])
+              .start(black, black).stop(cyan, cyan).on(clients[3])
+              .start(black, black).stop(blue, blue).on(clients[4])
               .during(1))
+        for i in range(10):
+            demo_animation.continue_with(Display()
+                  .start().stop(red, red).on(clients[ring_index(i)])
+                  .start().stop(yellow, yellow).on(clients[ring_index(i + 1)])
+                  .start().stop(green, green).on(clients[ring_index(i + 2)])
+                  .start().stop(cyan, cyan).on(clients[ring_index(i + 3)])
+                  .start().stop(blue, blue).on(clients[ring_index(i + 4)])
+                  .during(1))
+        demo_animation.continue_with(Display()
+             .start().stop(black, black).on(clients[0])
+             .start().stop(black, black).on(clients[1])
+             .start().stop(black, black).on(clients[2])
+             .start().stop(black, black).on(clients[3])
+             .start().stop(black, black).on(clients[4])
+             .during(1))
     return demo_animation
 
 
@@ -269,19 +287,47 @@ def glow_ani(color: Color, hungarian_name):
         .continue_with(From().to(black, black).during(1.5).on(*clients))
 
 
-def field_ani(colors: typing.List[Color]):
-    pass
+def field_ani(colors: typing.List[Color], cycle: int, duration: float, hungarian_name: str):
+    field_animation = Animation(hungarian_name=hungarian_name)
+    if len(clients) > 4:
+        duration_per_cycle = duration / (cycle + 2)
+        field_animation.then(Display()
+            .start(black, black).stop(random.choice(colors), random.choice(colors)).on(clients[0])
+            .start(black, black).stop(random.choice(colors), random.choice(colors)).on(clients[1])
+            .start(black, black).stop(random.choice(colors), random.choice(colors)).on(clients[2])
+            .start(black, black).stop(random.choice(colors), random.choice(colors)).on(clients[3])
+            .start(black, black).stop(random.choice(colors), random.choice(colors)).on(clients[4])
+            .during(duration_per_cycle))
+        for i in range(cycle):
+            field_animation.continue_with(Display()
+                .start().stop(random.choice(colors), random.choice(colors)).on(clients[0])
+                .start().stop(random.choice(colors), random.choice(colors)).on(clients[1])
+                .start().stop(random.choice(colors), random.choice(colors)).on(clients[2])
+                .start().stop(random.choice(colors), random.choice(colors)).on(clients[3])
+                .start().stop(random.choice(colors), random.choice(colors)).on(clients[4])
+                .during(duration_per_cycle))
+        field_animation.continue_with(Display()
+            .start().stop(black, black).on(clients[0])
+            .start().stop(black, black).on(clients[1])
+            .start().stop(black, black).on(clients[2])
+            .start().stop(black, black).on(clients[3])
+            .start().stop(black, black).on(clients[4])
+            .during(duration_per_cycle))
+    return field_animation
 
 
 def init_animations():
-    animations['demo'] = demo_ani()
-    animations['blessing'] = glow_ani(white, 'Áldás animáció')
+    animations['demo'] = demo_ani
+    animations['blessing'] = lambda: glow_ani(white, 'Áldás animáció')
     animations['peace'] = lambda: glow_ani(random.choice(pyserver.crystal.palette), 'Béke animáció')
     animations['safety'] = lambda: glow_ani(random.choice([
         pyserver.blue_apple.blue_orange,
         pyserver.blue_apple.blue_yellow,
         pyserver.blue_apple.new_stones
     ]), 'Biztonság animáció')
+    animations['fire'] = lambda: field_ani(pyserver.girl_on_fire.palette, duration=5, cycle=10, hungarian_name='Tűz animáció')
+    animations['ice'] = lambda: field_ani(pyserver.ice.palette, duration=5, cycle=10, hungarian_name='Jég animáció')
+    animations['forest'] = lambda: field_ani(pyserver.environment_friendly.palette, duration=5, cycle=10, hungarian_name='Zöld erdő animáció')
 
 
 @app.route('/play')
@@ -296,34 +342,8 @@ def play():
 
 @app.route('/demo')
 def demo():
-    animations['demo'].play()
+    animations['demo']().play()
     return 'demo executed'
-
-
-@app.route('/fast')
-def fast():
-    animation = Animation()
-    colors = [red, green, blue]
-    for color in colors * 10:
-        for current in clients:
-            animation \
-                .then(From(black, black).to(color, color).during(.05).on(current)) \
-                .continue_with(From().to(black, black).during(.05).on(current))
-    animation.play()
-    return 'fast test executed'
-
-
-@app.route('/long')
-def long():
-    animation = Animation()
-    colors = [red, green, blue]
-    for color in colors:
-        for current in clients:
-            animation \
-                .then(From(black, black).to(color, color).during(1).on(current)) \
-                .continue_with(From().to(black, black).during(1).on(current))
-    animation.play()
-    return 'long test executed'
 
 
 last_moved = None
@@ -409,8 +429,7 @@ def init_clients():
         while response != (200, '1'):
             response = get(f'http://{current}/toggle')
             print(f'toggling movement on {current}: {response}')
-        response = get(f'http://{current}/limit?l=0.1')
-        print(f'setting limit for {current} to {response}')
+        set_limit_on(current)
 
 
 if __name__ == '__main__':
