@@ -15,6 +15,7 @@ import codecs
 import winsound
 import random
 import collections
+import logging
 
 from pyserver.color import Color, red, green, blue, white, black, yellow, cyan
 import pyserver.girl_on_fire
@@ -22,6 +23,12 @@ import pyserver.crystal
 import pyserver.ice
 import pyserver.blue_apple
 import pyserver.environment_friendly
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+logger.addHandler(handler)
 
 
 def get(url) -> typing.Tuple[int, str]:
@@ -52,7 +59,7 @@ def ring_index(index) -> int:
 
 def set_limit_on(address: str, limit: float=.1):
     response = get(f'http://{address}/limit?l={limit}')
-    print(f'setting limit for {address} to {response}')
+    logger.debug(f'setting limit for {address} to {response}')
 
 
 @app.route('/reg')
@@ -62,20 +69,20 @@ def reg():
         clients.append(address)
         with open(reg_backup_file, 'a') as reg_backup:
             reg_backup.write(f'{address}\n')
-        print(f"Successful registration: {address} ({clients.index(address)}th client)")
+        logger.info(f"successful registration: {address} ({clients.index(address)}th client)")
         thread = threading.Thread(target=set_limit_on, args=[address])
         thread.start()
         winsound.Beep(1000, 300)
         winsound.Beep(3000, 100)
     else:
-        print(f"Clients already registered. ({clients.index(address)}th client)")
+        logger.info(f"clients already registered ({clients.index(address)}th client)")
         winsound.Beep(500, 500)
         winsound.Beep(300, 1000)
     return '', status.HTTP_200_OK
 
 
 def send_toggle():
-    print(f"toggling movement on {len(clients)} clients")
+    logger.info(f"toggling movement on {len(clients)} clients")
     urls = []
     for current in clients:
         url = f'http://{current}/toggle'
@@ -131,7 +138,7 @@ class From(object):
         return f'{" | ".join(map(str, self.start))} [ {self.duration / 1000} s ] {" | ".join(map(str, self.stop))} on {" , ".join(self.clients)}'
 
     def play(self):
-        # print(self)
+        logger.debug(self)
         send_show(self.start[0], self.start[1], self.stop[0], self.stop[1], self.duration, self.clients)
 
 
@@ -187,7 +194,7 @@ class Wait(object):
         return f'waiting {self.duration} s'
 
     def play(self):
-        # print(self)
+        logger.debug(self)
         time.sleep(self.duration)
 
 
@@ -382,6 +389,7 @@ def init_animations():
 def play():
     selected = request.args.get('animation')
     if selected in animations:
+        logger.info(f'playing {selected} animation directly triggered from {request.remote_addr}')
         threading.Thread(target=animations[selected]().play).start()
         return f'playing {selected}'
     else:
@@ -398,27 +406,27 @@ last_moved = None
 bouncing_limit = 20
 
 
-def moved():
+def moved(selected: str):
     global last_moved
     if isinstance(last_moved, float):
         past_time = time.perf_counter() - last_moved
-        print(f"{past_time} seconds past since last move")
+        logger.debug(f"{past_time} seconds past since last move")
         if past_time < bouncing_limit:
-            print(f"ignoring movement, {bouncing_limit - past_time} seconds left")
+            logger.warning(f"ignoring movement, {bouncing_limit - past_time} seconds left")
             return
     last_moved = time.perf_counter()
     # print(send_toggle())
-    print(f"playing animation")
-    animations['demo']().play()
+    logger.info(f"playing {selected} animation triggered by movement")
+    animations[selected]().play()
     # print(send_toggle())
 
 
 @app.route('/move')
 def move():
     client = request.remote_addr
-    if client in clients:
-        print(f"the {clients.index(client)}th client is registered a movement")
-        thread = threading.Thread(target=moved)
+    if True or client in clients:
+        #logger.info(f"the {clients.index(client)}th client is registered a movement")
+        thread = threading.Thread(target=moved, args=[random.choice(list(animations.keys()))])
         thread.start()
         return '', status.HTTP_200_OK
     else:
@@ -449,24 +457,25 @@ def exec():
 
 def load_back_up():
     if os.path.isfile(reg_backup_file):
-        print("reloading clients from back-up")
+        logger.info("reloading clients from back-up")
         with open(reg_backup_file, 'r') as reg_backup:
             for index, line in enumerate(reg_backup):
                 client = line.strip()
                 if client == '':
                     continue
-                print(f"#{index}: {client}")
+                logger.debug(f"loading #{index} client with IP of {client}")
                 try:
                     if int(get(f'http://{client}')[0]) == 200:
                         clients.append(client)
                     else:
-                        print(f"saved client {client} missing")
+                        logger.warning(f"saved client {client} missing, will not loaded next time")
                 except urllib.error.URLError:
-                    print(f"saved client {client} missing")
+                    logger.warning(f"saved client {client} missing, will not loaded next time")
+        logger.info("clients are loaded from back-up")
     else:
-        print("there is not any back-up file present")
+        logger.info("there is not any back-up file present")
     with open(reg_backup_file, 'w') as reg_backup:
-        print("saving currently registered clients")
+        logger.debug(f"re-saving currently aviable {len(clients)} clients")
         reg_backup.write('\n'.join(clients))
         reg_backup.write('\n')
 
@@ -476,15 +485,18 @@ def init_clients():
         response = ()
         while response != (200, '1'):
             response = get(f'http://{current}/toggle')
-            print(f'toggling movement on {current}: {response}')
+            logger.debug(f'toggling movement on {current}: {response}')
         set_limit_on(current)
     send_show(black, black, white, white, 1000, clients)
     send_show(white, white, black, black, 1000, clients)
 
 
 if __name__ == '__main__':
+    logger.info('init server and clients')
+
     load_back_up()
     init_animations()
     init_clients()
 
+    logger.info('starting web server life cycle')
     app.run(host='0.0.0.0', port=80, debug=True)

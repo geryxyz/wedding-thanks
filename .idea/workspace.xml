@@ -2,9 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="03529478-7a44-4611-947e-8e9a4daf91bc" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/pyserver/exec.html" beforeDir="false" afterPath="$PROJECT_DIR$/pyserver/exec.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pyserver/server.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyserver/server.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyserver/wish.html" beforeDir="false" afterPath="$PROJECT_DIR$/pyserver/wish.html" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -17,8 +15,11 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/pyserver/server.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="384">
-              <caret line="210" column="33" lean-forward="true" selection-start-line="210" selection-start-column="33" selection-end-line="210" selection-end-column="33" />
+            <state relative-caret-position="203">
+              <caret line="386" lean-forward="true" selection-start-line="386" selection-end-line="386" />
+              <folding>
+                <element signature="e#0#11#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -26,11 +27,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/pyserver/wish.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="560">
-              <caret line="73" selection-start-line="72" selection-end-line="73" />
-              <folding>
-                <element signature="n#style#0;n#div#0;n#form#0;n#body#0;n#html#0;n#!!top" expanded="true" />
-              </folding>
+            <state relative-caret-position="780">
+              <caret line="91" selection-start-line="91" selection-end-line="91" />
             </state>
           </provider>
         </entry>
@@ -38,8 +36,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/pyserver/exec.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="540">
-              <caret line="27" column="7" lean-forward="true" selection-start-line="27" selection-start-column="7" selection-end-line="27" selection-end-column="7" />
+            <state relative-caret-position="220">
+              <caret line="35" column="7" selection-start-line="35" selection-start-column="7" selection-end-line="35" selection-end-column="7" />
             </state>
           </provider>
         </entry>
@@ -86,8 +84,8 @@
         <option value="$PROJECT_DIR$/pyserver/grab_color.py" />
         <option value="$PROJECT_DIR$/pyserver/color.py" />
         <option value="$PROJECT_DIR$/pyserver/wish.html" />
-        <option value="$PROJECT_DIR$/pyserver/server.py" />
         <option value="$PROJECT_DIR$/pyserver/exec.html" />
+        <option value="$PROJECT_DIR$/pyserver/server.py" />
       </list>
     </option>
   </component>
@@ -204,14 +202,15 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="-8" y="-8" width="1936" height="1056" extended-state="6" />
+    <frame x="-7" y="-7" width="1550" height="838" extended-state="6" />
+    <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49319214" weight="0.12170706" />
       <window_info id="Structure" order="1" sideWeight="0.50680786" side_tool="true" weight="0.12170706" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" weight="0.3281471" />
-      <window_info anchor="bottom" id="Run" order="2" weight="0.283857" />
+      <window_info anchor="bottom" id="Run" order="2" weight="0.261669" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.3960396" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
@@ -273,13 +272,27 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/pyserver/grab_color.py">
+    <entry file="file://$PROJECT_DIR$/pyserver/server.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="700">
-          <caret line="38" column="10" selection-start-line="38" selection-start-column="10" selection-end-line="38" selection-end-column="10" />
+        <state relative-caret-position="203">
+          <caret line="386" lean-forward="true" selection-start-line="386" selection-end-line="386" />
           <folding>
-            <element signature="e#0#10#0" expanded="true" />
+            <element signature="e#0#11#0" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pyserver/wish.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="780">
+          <caret line="91" selection-start-line="91" selection-end-line="91" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pyserver/exec.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="220">
+          <caret line="35" column="7" selection-start-line="35" selection-start-column="7" selection-end-line="35" selection-end-column="7" />
         </state>
       </provider>
     </entry>
@@ -290,27 +303,13 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/pyserver/wish.html">
+    <entry file="file://$PROJECT_DIR$/pyserver/grab_color.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="560">
-          <caret line="73" selection-start-line="72" selection-end-line="73" />
+        <state relative-caret-position="700">
+          <caret line="38" column="10" selection-start-line="38" selection-start-column="10" selection-end-line="38" selection-end-column="10" />
           <folding>
-            <element signature="n#style#0;n#div#0;n#form#0;n#body#0;n#html#0;n#!!top" expanded="true" />
+            <element signature="e#0#10#0" expanded="true" />
           </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/pyserver/exec.html">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="540">
-          <caret line="27" column="7" lean-forward="true" selection-start-line="27" selection-start-column="7" selection-end-line="27" selection-end-column="7" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/pyserver/server.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="384">
-          <caret line="210" column="33" lean-forward="true" selection-start-line="210" selection-start-column="33" selection-end-line="210" selection-end-column="33" />
         </state>
       </provider>
     </entry>
