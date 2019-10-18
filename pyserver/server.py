@@ -195,9 +195,8 @@ Playable = typing.Union[From, Wait, Display]
 
 
 class Animation(object):
-    def __init__(self, hungarian_name='Névtelen animáció'):
+    def __init__(self):
         self._steps: typing.List[Playable] = []
-        self.hungarian_name = hungarian_name
 
     def then(self, step: Playable):
         self._steps.append(step)
@@ -237,15 +236,20 @@ animation_lock = threading.Lock()
 animations: typing.Dict[str, typing.Callable[[], Animation]] = {}
 
 
+def translate(animation: typing.Callable[[], Animation], hungarian_name: str):
+    animation.hungarian_name = hungarian_name
+    return animation
+
+
 def animations_html_option():
     options = []
-    for name, animation in animations.items():
-        options.append(f'<option value="{name}">{animation().hungarian_name}</option>')
+    for name, animation in sorted(animations.items(), key=lambda e: e[1].hungarian_name):
+        options.append(f'<option value="{name}">{animation.hungarian_name}</option>')
     return '\n'.join(options)
 
 
 def demo_ani():
-    demo_animation = Animation(hungarian_name='Demo animáció')
+    demo_animation = Animation()
     colors = [red, green, blue]
     for color in colors:
         for current in clients:
@@ -284,14 +288,14 @@ def demo_ani():
     return demo_animation
 
 
-def glow_ani(color: Color, hungarian_name):
-    return Animation(hungarian_name=hungarian_name) \
+def glow_ani(color: Color):
+    return Animation() \
         .then(From(black, black).to(color, color).during(1.5).on(*clients)) \
         .continue_with(From().to(black, black).during(1.5).on(*clients))
 
 
-def field_ani(colors: typing.List[Color], cycle: int, duration: float, hungarian_name: str):
-    field_animation = Animation(hungarian_name=hungarian_name)
+def field_ani(colors: typing.List[Color], cycle: int, duration: float):
+    field_animation = Animation()
     if len(clients) > 4:
         duration_per_cycle = duration / (cycle + 2)
         field_animation.then(Display()
@@ -319,8 +323,8 @@ def field_ani(colors: typing.List[Color], cycle: int, duration: float, hungarian
     return field_animation
 
 
-def round_about(particle_color: Color, trace_color: Color, trace_length: int, trace_fadding_factor: float, cycle: int, duration: float, hungarian_name):
-    round_about_animation = Animation(hungarian_name=hungarian_name)
+def round_about(particle_color: Color, trace_color: Color, trace_length: int, trace_fadding_factor: float, cycle: int, duration: float):
+    round_about_animation = Animation()
     if len(clients) > 4:
         duration_per_cycle = duration / (cycle + 1)
         for i in range(cycle):
@@ -348,34 +352,30 @@ def round_about(particle_color: Color, trace_color: Color, trace_length: int, tr
 
 
 def init_animations():
-    animations['demo'] = demo_ani
+    animations['demo'] = translate(demo_ani, 'Demo animáció')
 
-    animations['blessing'] = lambda: glow_ani(white, 'Áldás animáció')
-    animations['peace'] = lambda: glow_ani(random.choice(pyserver.crystal.palette), 'Béke animáció')
-    animations['safety'] = lambda: glow_ani(random.choice([
+    animations['blessing'] = translate(lambda: glow_ani(white), 'Áldás animáció')
+    animations['peace'] = translate(lambda: glow_ani(random.choice(pyserver.crystal.palette)), 'Béke animáció')
+    animations['safety'] = translate(lambda: glow_ani(random.choice([
         pyserver.blue_apple.blue_orange,
         pyserver.blue_apple.blue_yellow,
         pyserver.blue_apple.new_stones
-    ]), 'Biztonság animáció')
+    ])), 'Biztonság animáció')
 
-    animations['fire'] = lambda: field_ani(
+    animations['fire'] = translate(lambda: field_ani(
         pyserver.girl_on_fire.palette,
-        duration=5, cycle=10,
-        hungarian_name='Tűz animáció')
-    animations['ice'] = lambda: field_ani(
+        duration=5, cycle=10), 'Tűz animáció')
+    animations['ice'] = translate(lambda: field_ani(
         pyserver.ice.palette,
-        duration=5, cycle=10,
-        hungarian_name='Jég animáció')
-    animations['forest'] = lambda: field_ani(
+        duration=5, cycle=10), 'Jég animáció')
+    animations['forest'] = translate(lambda: field_ani(
         pyserver.environment_friendly.palette,
-        duration=5, cycle=10,
-        hungarian_name='Zöld erdő animáció')
+        duration=5, cycle=10), 'Zöld erdő animáció')
 
-    animations['comet'] = lambda: round_about(
+    animations['comet'] = translate(lambda: round_about(
         particle_color=white, trace_color=cyan * .5,
         trace_length=2, trace_fadding_factor=.3,
-        cycle=10, duration=5,
-        hungarian_name='Üstökös animáció')
+        cycle=10, duration=5), 'Üstökös animáció')
 
 
 @app.route('/play')

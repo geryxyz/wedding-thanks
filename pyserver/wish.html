@@ -2,39 +2,91 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Küldj egy kívánságot!</title>
+    <!-- https://www.colourlovers.com/palette/2392383/Autumn_2012_webpage -->
     <style type="text/css">
+        * {
+            margin: 0pt;
+            padding: 0pt;
+            color: #5F4F5A;
+            background-color: transparent;
+            border: none;
+        }
+        body {
+            background-color: #E7D5BD;
+        }
+        #wrapper {
+            margin: 6%;
+        }
         .header {
             font-weight: bold;
+        }
+        h1 {
+            margin: 10pt 0pt 5pt;
+        }
+        #wish {
+            border: .5px solid #261034;
+            box-sizing: border-box;
+            width: 100%;
+            padding: 5pt;
+            height: 10ex
+        }
+        #submit {
+            width:100%;
+            box-sizing: border-box;
+            margin-top: 10px;
+            padding: 5px;
+            border: .5px solid #261034;
+            background-color: #5F4F5A;
+            color: #E7D5BD;
+        }
+        #name {
+            border: .5px solid #261034;
+            box-sizing: border-box;
+            padding: 5pt;
+            margin: 10px 0px 5px;
+        }
+        #animation{
+            width: 100%;
+            border: .5px solid #261034;
+            box-sizing: border-box;
+            padding: 5pt;
+            margin: 10px 0px 5px;
+        }
+        option {
+            background-color: #E7D5BD;
+            color: #5F4F5A;
         }
     </style>
     <script lang="javascript">
         function validate() {
             var wish = document.getElementById('wish').value;
             var name = document.getElementById('name').value;
-            var test = (wish != 'kívánság vagy üzenet' && wish != '' && wish != null) && (name != '' && name != null);
-            if (!test) alert('Név és üzenet/kívánság kötelező!');
+            var test = (wish != 'Ide írd a kívánságot vagy üzenetet.' && wish != '' && wish != null) && (name != '' && name != null);
+            if (!test) alert('Az aláírás és üzenet/kívánság mezőket kötelező kitölteni!');
             return test;
         }
     </script>
 </head>
 <body>
-    <h1>Küldj egy kívánságot!</h1>
-    <form method="get" action="/exec" onsubmit="return validate()">
-        <textarea
-            id="wish"
-            name="wish"
-            style="width: 99%; height: 10ex"
-            onfocus="if (this.value == 'kívánság vagy üzenet') this.value=''"
-        >kívánság vagy üzenet</textarea><br/>
-        <div style="float:right">
-            <span class="header">aláírás: </span>
-            <input id="name" type="text" name="name" /><br/>
-        </div>
-        <select name="animation">
-            <option value="demo">Demo animáció</option>
-        </select>
-        <input id="submit" type="submit" style="width:100%" />
-    </form>
+    <div id="wrapper">
+        <h1>Küldj egy kívánságot!</h1>
+        <form method="get" action="/exec" onsubmit="return validate()">
+            <textarea
+                id="wish"
+                name="wish"
+                onfocus="if (this.value == 'Ide írd a kívánságot vagy üzenetet.') this.value=''"
+            >Ide írd a kívánságot vagy üzenetet.</textarea><br/>
+            <div style="float:right">
+                <span class="header">aláírás: </span>
+                <input id="name" type="text" name="name" /><br/>
+            </div>
+            <select id="animation" name="animation">
+                <option value="demo">Demo animáció</option>
+            </select>
+            <input id="submit" type="submit" />
+        </form>
+    </div>
 </body>
 </html>
