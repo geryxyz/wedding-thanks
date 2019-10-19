@@ -24,6 +24,9 @@ import pyserver.ice
 import pyserver.blue_apple
 import pyserver.environment_friendly
 import pyserver.stary_night
+import pyserver.dutch_seas
+import pyserver.dance_to_forget
+import pyserver.techno_sailing
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -239,6 +242,10 @@ class Animation(object):
             for step in self._steps:
                 step.play()
 
+    def reverse(self):
+        self._steps = self._steps[::-1]
+        return self
+
 
 animation_lock = threading.Lock()
 animations: typing.Dict[str, typing.Callable[[], Animation]] = {}
@@ -403,6 +410,83 @@ def round_about(particle_color: Color, trace_color: Color, trace_length: int, tr
     return round_about_animation
 
 
+def ripple(colors: typing.List[Color], duration: float, cycle: int):
+    def select():
+        return random.choice(colors)
+
+    ripple_animation = Animation()
+    duration_per_cycle = duration / (4 * cycle)
+    for i in range(cycle):
+        ripple_animation.continue_with(Display()
+            .start().stop(black, black).on(clients[0])
+            .start().stop(black, black).on(clients[1])
+            .start().stop(select(), select()).on(clients[2])
+            .start().stop(black, black).on(clients[3])
+            .start().stop(black, black).on(clients[4])
+            .during(duration_per_cycle))\
+        .continue_with(Display()
+            .start().stop(black, black).on(clients[0])
+            .start().stop(select(), select()).on(clients[1])
+            .start().stop(black, black).on(clients[2])
+            .start().stop(select(), select()).on(clients[3])
+            .start().stop(black, black).on(clients[4])
+            .during(duration_per_cycle))\
+        .continue_with(Display()
+            .start().stop(select(), select()).on(clients[0])
+            .start().stop(black, black).on(clients[1])
+            .start().stop(black, black).on(clients[2])
+            .start().stop(black, black).on(clients[3])
+            .start().stop(select(), select()).on(clients[4])
+            .during(duration_per_cycle))\
+        .continue_with(Display()
+            .start().stop(black, black).on(clients[0])
+            .start().stop(black, black).on(clients[1])
+            .start().stop(black, black).on(clients[2])
+            .start().stop(black, black).on(clients[3])
+            .start().stop(black, black).on(clients[4])
+            .during(duration_per_cycle))
+    return ripple_animation
+
+
+def drain(colors: typing.List[Color], duration: float, cycle: int):
+    def select():
+        return random.choice(colors)
+
+    ripple_animation = Animation()
+    duration_per_cycle = duration / (4 * cycle)
+    for i in range(cycle):
+        ripple_animation\
+        .continue_with(Display()
+            .start().stop(select(), select()).on(clients[0])
+            .start().stop(black, black).on(clients[1])
+            .start().stop(black, black).on(clients[2])
+            .start().stop(black, black).on(clients[3])
+            .start().stop(select(), select()).on(clients[4])
+            .during(duration_per_cycle))\
+        .continue_with(Display()
+            .start().stop(black, black).on(clients[0])
+            .start().stop(select(), select()).on(clients[1])
+            .start().stop(black, black).on(clients[2])
+            .start().stop(select(), select()).on(clients[3])
+            .start().stop(black, black).on(clients[4])
+            .during(duration_per_cycle))\
+        .continue_with(Display()
+            .start().stop(black, black).on(clients[0])
+            .start().stop(black, black).on(clients[1])
+            .start().stop(select(), select()).on(clients[2])
+            .start().stop(black, black).on(clients[3])
+            .start().stop(black, black).on(clients[4])
+            .during(duration_per_cycle))\
+        .continue_with(Display()
+            .start().stop(black, black).on(clients[0])
+            .start().stop(black, black).on(clients[1])
+            .start().stop(black, black).on(clients[2])
+            .start().stop(black, black).on(clients[3])
+            .start().stop(black, black).on(clients[4])
+            .during(duration_per_cycle))
+    return ripple_animation
+
+
 def init_animations():
     animations['demo'] = translate(demo_ani, 'Demo animáció')
 
@@ -423,6 +507,9 @@ def init_animations():
     animations['forest'] = translate(lambda: field_ani(
         pyserver.environment_friendly.palette,
         duration=5, cycle=10), 'Zöld erdő animáció')
+    animations['happyness'] = translate(lambda: field_ani(
+        pyserver.techno_sailing.palette,
+        duration=5, cycle=10), 'Vidámság animáció')
 
     animations['comet'] = translate(lambda: round_about(
         particle_color=random.choice(pyserver.crystal.palette), trace_color=random.choice(pyserver.ice.palette) * .5,
@@ -470,6 +557,14 @@ def init_animations():
         ],
         spot_chance=.1, cycle=15,
         duration=10, spot_background_duration_ratio=.5), 'Szikrák animáció')
+
+    animations['pond'] = translate(lambda: ripple(
+        colors=pyserver.dutch_seas.palette[1:],
+        cycle=random.choice([2, 3, 5, 8]), duration=3), 'Tó animáció')
+
+    animations['love'] = translate(lambda: drain(
+        colors=pyserver.dance_to_forget.palette,
+        cycle=5, duration=10), 'Szerelem animáció')
 
 
 @app.route('/play')
