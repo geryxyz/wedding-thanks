@@ -23,6 +23,7 @@ import pyserver.crystal
 import pyserver.ice
 import pyserver.blue_apple
 import pyserver.environment_friendly
+import pyserver.stary_night
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -330,6 +331,50 @@ def field_ani(colors: typing.List[Color], cycle: int, duration: float):
     return field_animation
 
 
+def spot_ani(forground_colors: typing.List[Color], background_colors: typing.List[Color], spot_chance: float,
+             cycle: int, duration: float, spot_background_duration_ratio: float):
+    field_animation = Animation()
+    if len(clients) > 4:
+        duration_per_cycle = duration / (cycle + 2)
+
+        def select():
+            if random.random() < spot_chance:
+                return random.choice(forground_colors)
+            else:
+                return random.choice(background_colors)
+
+        field_animation.then(Display()
+            .start(black, black).stop(select(), select()).on(clients[0])
+            .start(black, black).stop(select(), select()).on(clients[1])
+            .start(black, black).stop(select(), select()).on(clients[2])
+            .start(black, black).stop(select(), select()).on(clients[3])
+            .start(black, black).stop(select(), select()).on(clients[4])
+            .during(duration_per_cycle))
+        for i in range(cycle):
+            field_animation.continue_with(Display()
+                .start().stop(select(), select()).on(clients[0])
+                .start().stop(select(), select()).on(clients[1])
+                .start().stop(select(), select()).on(clients[2])
+                .start().stop(select(), select()).on(clients[3])
+                .start().stop(select(), select()).on(clients[4])
+                .during(duration_per_cycle * spot_background_duration_ratio)) \
+            .continue_with(Display()
+                .start().stop(random.choice(background_colors), random.choice(background_colors)).on(clients[0])
+                .start().stop(random.choice(background_colors), random.choice(background_colors)).on(clients[1])
+                .start().stop(random.choice(background_colors), random.choice(background_colors)).on(clients[2])
+                .start().stop(random.choice(background_colors), random.choice(background_colors)).on(clients[3])
+                .start().stop(random.choice(background_colors), random.choice(background_colors)).on(clients[4])
+                .during(duration_per_cycle * (1 - spot_background_duration_ratio)))
+        field_animation.continue_with(Display()
+            .start().stop(black, black).on(clients[0])
+            .start().stop(black, black).on(clients[1])
+            .start().stop(black, black).on(clients[2])
+            .start().stop(black, black).on(clients[3])
+            .start().stop(black, black).on(clients[4])
+            .during(duration_per_cycle))
+    return field_animation
+
+
 def round_about(particle_color: Color, trace_color: Color, trace_length: int, trace_fadding_factor: float, cycle: int, duration: float):
     round_about_animation = Animation()
     if len(clients) > 4:
@@ -380,9 +425,51 @@ def init_animations():
         duration=5, cycle=10), 'Zöld erdő animáció')
 
     animations['comet'] = translate(lambda: round_about(
-        particle_color=white, trace_color=cyan * .5,
+        particle_color=random.choice(pyserver.crystal.palette), trace_color=random.choice(pyserver.ice.palette) * .5,
         trace_length=2, trace_fadding_factor=.3,
-        cycle=10, duration=5), 'Üstökös animáció')
+        cycle=20, duration=6), 'Üstökös animáció')
+
+    animations['fireball'] = translate(lambda: round_about(
+        particle_color=random.choice([
+            pyserver.girl_on_fire.orange_peel,
+            pyserver.girl_on_fire.bright_ideas
+        ]),
+        trace_color=random.choice([
+            pyserver.girl_on_fire.tomato,
+            pyserver.girl_on_fire.red15,
+            pyserver.stary_night.plume_stain
+        ]) * .5,
+        trace_length=3, trace_fadding_factor=.6,
+        cycle=30, duration=6), 'Tűzgolyó animáció')
+
+    animations['nightsky'] = translate(lambda: spot_ani(
+        forground_colors=[
+            pyserver.stary_night.shitty_blue,
+            pyserver.girl_on_fire.bright_ideas,
+            pyserver.environment_friendly.doop
+        ],
+        background_colors=[
+            pyserver.stary_night.cobbled_plum,
+            pyserver.stary_night.light_fading_,
+            pyserver.stary_night.plume_stain,
+            pyserver.stary_night.true_eggplant
+        ],
+        spot_chance=.1, cycle=15,
+        duration=10, spot_background_duration_ratio=.33), 'Csillagos ég animáció')
+
+    animations['sparks'] = translate(lambda: spot_ani(
+        forground_colors=[
+            pyserver.girl_on_fire.orange_peel,
+            pyserver.girl_on_fire.bright_ideas,
+            pyserver.girl_on_fire.red15
+        ],
+        background_colors=[
+            pyserver.stary_night.cobbled_plum,
+            pyserver.stary_night.light_fading_,
+            pyserver.stary_night.true_eggplant
+        ],
+        spot_chance=.1, cycle=15,
+        duration=10, spot_background_duration_ratio=.5), 'Szikrák animáció')
 
 
 @app.route('/play')
