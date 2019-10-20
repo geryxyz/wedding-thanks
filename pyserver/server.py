@@ -61,7 +61,7 @@ def ring_index(index) -> int:
     return index % len(clients)
 
 
-def set_limit_on(address: str, limit: float=.1):
+def set_limit_on(address: str, limit: float=.05):
     response = get(f'http://{address}/limit?l={limit}')
     logger.debug(f'setting limit for {address} to {response}')
 
@@ -248,7 +248,7 @@ class Animation(object):
 
 
 animation_lock = threading.Lock()
-animations: typing.Dict[str, typing.Callable[[], Animation]] = {}
+animations: typing.Dict[str, typing.Callable[[int], Animation]] = {}
 
 
 def translate(animation: typing.Callable[[], Animation], hungarian_name: str):
@@ -382,21 +382,23 @@ def spot_ani(forground_colors: typing.List[Color], background_colors: typing.Lis
     return field_animation
 
 
-def round_about(particle_color: Color, trace_color: Color, trace_length: int, trace_fadding_factor: float, cycle: int, duration: float):
+def round_about(particle_color: Color, trace_color: Color,
+                trace_length: int, trace_fadding_factor: float,
+                cycle: int, duration: float, offset: int):
     round_about_animation = Animation()
     if len(clients) > 4:
         duration_per_cycle = duration / (cycle + 1)
         for i in range(cycle):
-            step = Display().start().stop(particle_color, particle_color).on(clients[ring_index(i)])
+            step = Display().start().stop(particle_color, particle_color).on(clients[ring_index(i + offset)])
             if trace_length > 4:
                 raise ValueError("trace max length is 4")
             current_trace_color = trace_color
             for j in range(1, 5):
                 if j <= trace_length:
-                    step.start().stop(current_trace_color, current_trace_color).on(clients[ring_index(i - j)])
+                    step.start().stop(current_trace_color, current_trace_color).on(clients[ring_index(i - j + offset)])
                     current_trace_color = current_trace_color * trace_fadding_factor
                 else:
-                    step.start().stop(black, black).on(clients[ring_index(i - j)])
+                    step.start().stop(black, black).on(clients[ring_index(i - j + offset)])
             step.during(duration_per_cycle)
             round_about_animation.continue_with(step)
             # round_about_animation.then(Wait(duration_per_cycle * .5))
@@ -410,7 +412,7 @@ def round_about(particle_color: Color, trace_color: Color, trace_length: int, tr
     return round_about_animation
 
 
-def ripple(colors: typing.List[Color], duration: float, cycle: int):
+def ripple(colors: typing.List[Color], duration: float, cycle: int, offset: int):
     def select():
         return random.choice(colors)
 
@@ -418,37 +420,37 @@ def ripple(colors: typing.List[Color], duration: float, cycle: int):
     duration_per_cycle = duration / (4 * cycle)
     for i in range(cycle):
         ripple_animation.continue_with(Display()
-            .start().stop(black, black).on(clients[0])
-            .start().stop(black, black).on(clients[1])
-            .start().stop(select(), select()).on(clients[2])
-            .start().stop(black, black).on(clients[3])
-            .start().stop(black, black).on(clients[4])
+            .start().stop(black, black).on(clients[ring_index(-2 + offset)])
+            .start().stop(black, black).on(clients[ring_index(-1 + offset)])
+            .start().stop(select(), select()).on(clients[ring_index(0 + offset)])
+            .start().stop(black, black).on(clients[ring_index(1 + offset)])
+            .start().stop(black, black).on(clients[ring_index(2 + offset)])
             .during(duration_per_cycle))\
         .continue_with(Display()
-            .start().stop(black, black).on(clients[0])
-            .start().stop(select(), select()).on(clients[1])
-            .start().stop(black, black).on(clients[2])
-            .start().stop(select(), select()).on(clients[3])
-            .start().stop(black, black).on(clients[4])
+            .start().stop(black, black).on(clients[ring_index(-2 + offset)])
+            .start().stop(select(), select()).on(clients[ring_index(-1 + offset)])
+            .start().stop(black, black).on(clients[ring_index(0 + offset)])
+            .start().stop(select(), select()).on(clients[ring_index(1 + offset)])
+            .start().stop(black, black).on(clients[ring_index(2 + offset)])
             .during(duration_per_cycle))\
         .continue_with(Display()
-            .start().stop(select(), select()).on(clients[0])
-            .start().stop(black, black).on(clients[1])
-            .start().stop(black, black).on(clients[2])
-            .start().stop(black, black).on(clients[3])
-            .start().stop(select(), select()).on(clients[4])
+            .start().stop(select(), select()).on(clients[ring_index(-2 + offset)])
+            .start().stop(black, black).on(clients[ring_index(-1 + offset)])
+            .start().stop(black, black).on(clients[ring_index(0 + offset)])
+            .start().stop(black, black).on(clients[ring_index(1 + offset)])
+            .start().stop(select(), select()).on(clients[ring_index(2 + offset)])
             .during(duration_per_cycle))\
         .continue_with(Display()
-            .start().stop(black, black).on(clients[0])
-            .start().stop(black, black).on(clients[1])
-            .start().stop(black, black).on(clients[2])
-            .start().stop(black, black).on(clients[3])
-            .start().stop(black, black).on(clients[4])
+            .start().stop(black, black).on(clients[ring_index(-2 + offset)])
+            .start().stop(black, black).on(clients[ring_index(-1 + offset)])
+            .start().stop(black, black).on(clients[ring_index(0 + offset)])
+            .start().stop(black, black).on(clients[ring_index(1 + offset)])
+            .start().stop(black, black).on(clients[ring_index(2 + offset)])
             .during(duration_per_cycle))
     return ripple_animation
 
 
-def drain(colors: typing.List[Color], duration: float, cycle: int):
+def drain(colors: typing.List[Color], duration: float, cycle: int, offset: int):
     def select():
         return random.choice(colors)
 
@@ -457,32 +459,32 @@ def drain(colors: typing.List[Color], duration: float, cycle: int):
     for i in range(cycle):
         ripple_animation\
         .continue_with(Display()
-            .start().stop(select(), select()).on(clients[0])
-            .start().stop(black, black).on(clients[1])
-            .start().stop(black, black).on(clients[2])
-            .start().stop(black, black).on(clients[3])
-            .start().stop(select(), select()).on(clients[4])
+            .start().stop(select(), select()).on(clients[ring_index(-2 + offset)])
+            .start().stop(black, black).on(clients[ring_index(-1 + offset)])
+            .start().stop(black, black).on(clients[ring_index(0 + offset)])
+            .start().stop(black, black).on(clients[ring_index(1 + offset)])
+            .start().stop(select(), select()).on(clients[ring_index(2 + offset)])
             .during(duration_per_cycle))\
         .continue_with(Display()
-            .start().stop(black, black).on(clients[0])
-            .start().stop(select(), select()).on(clients[1])
-            .start().stop(black, black).on(clients[2])
-            .start().stop(select(), select()).on(clients[3])
-            .start().stop(black, black).on(clients[4])
+            .start().stop(black, black).on(clients[ring_index(-2 + offset)])
+            .start().stop(select(), select()).on(clients[ring_index(-1 + offset)])
+            .start().stop(black, black).on(clients[ring_index(0 + offset)])
+            .start().stop(select(), select()).on(clients[ring_index(1 + offset)])
+            .start().stop(black, black).on(clients[ring_index(2 + offset)])
             .during(duration_per_cycle))\
         .continue_with(Display()
-            .start().stop(black, black).on(clients[0])
-            .start().stop(black, black).on(clients[1])
-            .start().stop(select(), select()).on(clients[2])
-            .start().stop(black, black).on(clients[3])
-            .start().stop(black, black).on(clients[4])
+            .start().stop(black, black).on(clients[ring_index(-2 + offset)])
+            .start().stop(black, black).on(clients[ring_index(-1 + offset)])
+            .start().stop(select(), select()).on(clients[ring_index(0 + offset)])
+            .start().stop(black, black).on(clients[ring_index(1 + offset)])
+            .start().stop(black, black).on(clients[ring_index(2 + offset)])
             .during(duration_per_cycle))\
         .continue_with(Display()
-            .start().stop(black, black).on(clients[0])
-            .start().stop(black, black).on(clients[1])
-            .start().stop(black, black).on(clients[2])
-            .start().stop(black, black).on(clients[3])
-            .start().stop(black, black).on(clients[4])
+            .start().stop(black, black).on(clients[ring_index(-2 + offset)])
+            .start().stop(black, black).on(clients[ring_index(-1 + offset)])
+            .start().stop(black, black).on(clients[ring_index(0 + offset)])
+            .start().stop(black, black).on(clients[ring_index(1 + offset)])
+            .start().stop(black, black).on(clients[ring_index(2 + offset)])
             .during(duration_per_cycle))
     return ripple_animation
 
@@ -507,16 +509,16 @@ def init_animations():
     animations['forest'] = translate(lambda: field_ani(
         pyserver.environment_friendly.palette,
         duration=5, cycle=10), 'Zöld erdő animáció')
-    animations['happyness'] = translate(lambda: field_ani(
+    animations['happiness'] = translate(lambda: field_ani(
         [red, green, blue, yellow, cyan, magenta],
         duration=5, cycle=10), 'Vidámság animáció')
 
-    animations['comet'] = translate(lambda: round_about(
+    animations['comet'] = translate(lambda offset=random.choice(range(5)): round_about(
         particle_color=random.choice(pyserver.crystal.palette), trace_color=random.choice(pyserver.ice.palette) * .5,
         trace_length=2, trace_fadding_factor=.3,
-        cycle=20, duration=6), 'Üstökös animáció')
+        cycle=20, duration=6, offset=offset), 'Üstökös animáció')
 
-    animations['fireball'] = translate(lambda: round_about(
+    animations['fireball'] = translate(lambda offset=random.choice(range(5)): round_about(
         particle_color=random.choice([
             pyserver.girl_on_fire.orange_peel,
             pyserver.girl_on_fire.bright_ideas
@@ -527,7 +529,7 @@ def init_animations():
             pyserver.stary_night.plume_stain
         ]) * .5,
         trace_length=3, trace_fadding_factor=.6,
-        cycle=30, duration=6), 'Tűzgolyó animáció')
+        cycle=30, duration=6, offset=offset), 'Tűzgolyó animáció')
 
     animations['nightsky'] = translate(lambda: spot_ani(
         forground_colors=[
@@ -558,13 +560,13 @@ def init_animations():
         spot_chance=.1, cycle=15,
         duration=10, spot_background_duration_ratio=.5), 'Szikrák animáció')
 
-    animations['pond'] = translate(lambda: ripple(
+    animations['pond'] = translate(lambda offset=random.choice(range(5)): ripple(
         colors=pyserver.dutch_seas.palette[1:],
-        cycle=random.choice([2, 3, 5, 8]), duration=3), 'Tó animáció')
+        cycle=random.choice([2, 3, 5, 8]), duration=3, offset=offset), 'Tó animáció')
 
-    animations['love'] = translate(lambda: drain(
+    animations['love'] = translate(lambda offset=random.choice(range(5)): drain(
         colors=pyserver.dance_to_forget.palette,
-        cycle=5, duration=10), 'Szerelem animáció')
+        cycle=5, duration=10, offset=offset), 'Szerelem animáció')
 
 
 @app.route('/play')
@@ -605,7 +607,7 @@ last_moved = None
 bouncing_limit = 20
 
 
-def moved(selected: str):
+def moved(selected: str, offset: int):
     global last_moved
     if isinstance(last_moved, float):
         past_time = time.perf_counter() - last_moved
@@ -615,17 +617,20 @@ def moved(selected: str):
             return
     last_moved = time.perf_counter()
     # print(send_toggle())
-    logger.info(f"playing {selected} animation triggered by movement")
-    animations[selected]().play()
+    logger.info(f"playing {selected} animation triggered by movement on {offset}th client")
+    animations[selected](offset=offset).play()
     # print(send_toggle())
 
 
 @app.route('/move')
 def move():
     client = request.remote_addr
-    if True or client in clients:
-        #logger.info(f"the {clients.index(client)}th client is registered a movement")
-        thread = threading.Thread(target=moved, args=[random.choice(list(animations.keys()))])
+    if client in clients:
+        index = clients.index(client)
+        logger.info(f"the {index}th client is registered a movement")
+        # TODO: prefer local animation
+        thread = threading.Thread(target=moved, args=[random.choice(list(animations.keys())), index])
+        #thread = threading.Thread(target=moved, args=['pond'], kwargs={'offset': index})
         thread.start()
         return '', status.HTTP_200_OK
     else:
@@ -647,11 +652,17 @@ def user_interface():
 def exec():
     wish = request.args.get('wish')
     name = request.args.get('name')
-    if wish is not None and name is not None:
-        with codecs.open('wishes.txt', 'a') as wishes:
-            wishes.write(f'{datetime.datetime.now()}\t{wish}\t{name}\t{request.remote_addr}\n')
-    # TODO: send selected animation
-    return serve_file('exec.html'), status.HTTP_200_OK
+    animation = request.args.get('animation')
+    if wish is not None and name is not None and animation is not None:
+        with codecs.open('wishes.txt', 'a', encoding='utf-8') as wishes:
+            wishes.write(f'{datetime.datetime.now()}\t{wish}\t{name}\t{animation}\t{request.remote_addr}\n')
+        threading.Thread(target=animations[animation]().play).start()
+    wishes_as_html = []
+    with codecs.open('wishes.txt', 'r', encoding='utf-8') as wishes:
+        for line in wishes:
+            parts = line.strip().split('\t')
+            wishes_as_html.append(f'<p class="wish">{parts[1]} <span class="animation">{animations[parts[3]].hungarian_name}</span> <span class="name">- {parts[2]} ({parts[-1]})</span></p>')
+    return serve_file('exec.html').replace('<p class="wish"></p>', '\n'.join(wishes_as_html)), status.HTTP_200_OK
 
 
 def load_back_up():
