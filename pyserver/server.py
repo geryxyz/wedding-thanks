@@ -17,7 +17,7 @@ import random
 import collections
 import logging
 
-from pyserver.color import Color, red, green, blue, white, black, yellow, cyan
+from pyserver.color import Color, red, green, blue, white, black, yellow, cyan, magenta
 import pyserver.girl_on_fire
 import pyserver.crystal
 import pyserver.ice
@@ -508,7 +508,7 @@ def init_animations():
         pyserver.environment_friendly.palette,
         duration=5, cycle=10), 'Zöld erdő animáció')
     animations['happyness'] = translate(lambda: field_ani(
-        pyserver.techno_sailing.palette,
+        [red, green, blue, yellow, cyan, magenta],
         duration=5, cycle=10), 'Vidámság animáció')
 
     animations['comet'] = translate(lambda: round_about(
@@ -580,8 +580,25 @@ def play():
 
 @app.route('/demo')
 def demo():
-    animations['demo']().play()
-    return 'demo executed'
+    animation = request.args.get('animation')
+    client = request.args.get('client')
+    if animation is not None:
+        threading.Thread(target=animations[animation]().play).start()
+    if client is not None:
+        threading.Thread(target=lambda: Animation()
+                         .then(From().to(red, red).on(client))
+                         .continue_with(From().to(green, green).on(client).during(1))
+                         .continue_with(From().to(blue, blue).on(client).during(1))
+                         .continue_with(From().to(black, black).on(client).during(1)).play()).start()
+    return serve_file('demo.html')\
+        .replace(
+            '<a class="animation" href="demo">Demó animáció</a>',
+            '\n'.join([f'<a class="animation" href="/demo?animation={key}">{animation.hungarian_name}</a>' for key, animation in animations.items()])
+        )\
+        .replace(
+            '<a class="client" href=""></a>',
+            '\n'.join([f'<a class="client" href="/demo?client={client}">{client}</a>' for client in clients])
+        ), status.HTTP_200_OK
 
 
 last_moved = None
