@@ -249,9 +249,20 @@ class Animation(object):
 
 animation_lock = threading.Lock()
 animations: typing.Dict[str, typing.Callable[[int], Animation]] = {}
+local_animations: typing.Dict[str, typing.Callable[[int], Animation]] = {}
+global_animations: typing.Dict[str, typing.Callable[[int], Animation]] = {}
 
 
-def translate(animation: typing.Callable[[], Animation], hungarian_name: str):
+def local(animation: typing.Callable[[int], Animation]):
+    animation.local = True
+    return animation
+
+
+def is_local(animation: typing.Callable[[int], Animation]):
+    return hasattr(animation, 'local') and animation.local
+
+
+def translate(animation: typing.Callable[[int], Animation], hungarian_name: str):
     animation.hungarian_name = hungarian_name
     return animation
 
@@ -490,35 +501,35 @@ def drain(colors: typing.List[Color], duration: float, cycle: int, offset: int):
 
 
 def init_animations():
-    animations['demo'] = translate(demo_ani, 'Demo animáció')
+    animations['demo'] = translate(lambda offset=random.choice(range(5)): demo_ani(), 'Demo animáció')
 
-    animations['blessing'] = translate(lambda: glow_ani(white), 'Áldás animáció')
-    animations['peace'] = translate(lambda: glow_ani(random.choice(pyserver.crystal.palette)), 'Béke animáció')
-    animations['safety'] = translate(lambda: glow_ani(random.choice([
+    animations['blessing'] = translate(lambda offset=random.choice(range(5)): glow_ani(white), 'Áldás animáció')
+    animations['peace'] = translate(lambda offset=random.choice(range(5)): glow_ani(random.choice(pyserver.crystal.palette)), 'Béke animáció')
+    animations['safety'] = translate(lambda offset=random.choice(range(5)): glow_ani(random.choice([
         pyserver.blue_apple.blue_orange,
         pyserver.blue_apple.blue_yellow,
         pyserver.blue_apple.new_stones
     ])), 'Biztonság animáció')
 
-    animations['fire'] = translate(lambda: field_ani(
+    animations['fire'] = translate(lambda offset=random.choice(range(5)): field_ani(
         pyserver.girl_on_fire.palette,
         duration=5, cycle=10), 'Tűz animáció')
-    animations['ice'] = translate(lambda: field_ani(
+    animations['ice'] = translate(lambda offset=random.choice(range(5)): field_ani(
         pyserver.ice.palette,
         duration=5, cycle=10), 'Jég animáció')
-    animations['forest'] = translate(lambda: field_ani(
+    animations['forest'] = translate(lambda offset=random.choice(range(5)): field_ani(
         pyserver.environment_friendly.palette,
         duration=5, cycle=10), 'Zöld erdő animáció')
-    animations['happiness'] = translate(lambda: field_ani(
+    animations['happiness'] = translate(lambda offset=random.choice(range(5)): field_ani(
         [red, green, blue, yellow, cyan, magenta],
         duration=5, cycle=10), 'Vidámság animáció')
 
-    animations['comet'] = translate(lambda offset=random.choice(range(5)): round_about(
+    animations['comet'] = local(translate(lambda offset=random.choice(range(5)): round_about(
         particle_color=random.choice(pyserver.crystal.palette), trace_color=random.choice(pyserver.ice.palette) * .5,
         trace_length=2, trace_fadding_factor=.3,
-        cycle=20, duration=6, offset=offset), 'Üstökös animáció')
+        cycle=20, duration=6, offset=offset), 'Üstökös animáció'))
 
-    animations['fireball'] = translate(lambda offset=random.choice(range(5)): round_about(
+    animations['fireball'] = local(translate(lambda offset=random.choice(range(5)): round_about(
         particle_color=random.choice([
             pyserver.girl_on_fire.orange_peel,
             pyserver.girl_on_fire.bright_ideas
@@ -529,9 +540,9 @@ def init_animations():
             pyserver.stary_night.plume_stain
         ]) * .5,
         trace_length=3, trace_fadding_factor=.6,
-        cycle=30, duration=6, offset=offset), 'Tűzgolyó animáció')
+        cycle=30, duration=6, offset=offset), 'Tűzgolyó animáció'))
 
-    animations['nightsky'] = translate(lambda: spot_ani(
+    animations['nightsky'] = translate(lambda offset=random.choice(range(5)): spot_ani(
         forground_colors=[
             pyserver.stary_night.shitty_blue,
             pyserver.girl_on_fire.bright_ideas,
@@ -546,7 +557,7 @@ def init_animations():
         spot_chance=.1, cycle=15,
         duration=10, spot_background_duration_ratio=.33), 'Csillagos ég animáció')
 
-    animations['sparks'] = translate(lambda: spot_ani(
+    animations['sparks'] = translate(lambda offset=random.choice(range(5)): spot_ani(
         forground_colors=[
             pyserver.girl_on_fire.orange_peel,
             pyserver.girl_on_fire.bright_ideas,
@@ -560,13 +571,17 @@ def init_animations():
         spot_chance=.1, cycle=15,
         duration=10, spot_background_duration_ratio=.5), 'Szikrák animáció')
 
-    animations['pond'] = translate(lambda offset=random.choice(range(5)): ripple(
+    animations['pond'] = local(translate(lambda offset=random.choice(range(5)): ripple(
         colors=pyserver.dutch_seas.palette[1:],
-        cycle=random.choice([2, 3, 5, 8]), duration=3, offset=offset), 'Tó animáció')
+        cycle=random.choice([2, 3, 5]), duration=3, offset=offset), 'Tó animáció'))
 
-    animations['love'] = translate(lambda offset=random.choice(range(5)): drain(
+    animations['love'] = local(translate(lambda offset=random.choice(range(5)): drain(
         colors=pyserver.dance_to_forget.palette,
-        cycle=5, duration=10, offset=offset), 'Szerelem animáció')
+        cycle=5, duration=10, offset=offset), 'Szerelem animáció'))
+
+    global local_animations, global_animations
+    local_animations = {key: animation for key, animation in animations.items() if is_local(animation)}
+    global_animations = {key: animation for key, animation in animations.items() if not is_local(animation)}
 
 
 @app.route('/play')
@@ -628,9 +643,10 @@ def move():
     if client in clients:
         index = clients.index(client)
         logger.info(f"the {index}th client is registered a movement")
-        # TODO: prefer local animation
-        thread = threading.Thread(target=moved, args=[random.choice(list(animations.keys())), index])
-        #thread = threading.Thread(target=moved, args=['pond'], kwargs={'offset': index})
+        if random.random() > .25:
+            thread = threading.Thread(target=moved, args=[random.choice(list(local_animations.keys())), index])
+        else:
+            thread = threading.Thread(target=moved, args=[random.choice(list(global_animations.keys())), index])
         thread.start()
         return '', status.HTTP_200_OK
     else:
