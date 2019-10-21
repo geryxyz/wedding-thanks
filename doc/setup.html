@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup</title>
+    <style type="text/css">
+        dt {
+            font-weight: bold;
+        }
+        dd {
+        }
+        table {
+            border: 1pt solid black;
+            margin: 5pt;
+        }
+        table tr td {
+            padding: 2pt 5pt;
+        }
+        span.severity {
+            padding:0pt 2pt;
+            border:solid black 1pt;
+            margin:0pt 1pt;
+        }
+        span.digit {
+            padding:0pt 6pt;
+            border:solid black 1pt;
+        }
+        .note {
+            font-style: italic;
+            text-align: center;
+            padding-bottom: 20pt;
+        }
+    </style>
+</head>
+<body>
+    <h1>Setup WishBalloons</h1>
+    <h2>Conventions</h2>
+    <dl>
+        <dt>client</dt><dd>The control circuits located inside the balloons meant to display colors and signal movements.</dd>
+        <dt>server</dt><dd>The laptop where the HTTP server located and executed to orchestrate the animations.</dd>
+        <dt>router</dt><dd>The router is the device which provides the network via WiFi to the clients and via UTP wire to the server.</dd>
+        <dt>feedback code</dt><dd>Series of color flashes made by the clients to notify the user for their state. All feedback starts and ends with two short blinks of the same color.
+        <table>
+            <tr><td>white</td><td>status</td></tr>
+            <tr><td>green</td><td>okay</td></tr>
+            <tr><td>yellow</td><td>warning</td></tr>
+            <tr><td>red</td><td>error</td></tr>
+        </table>
+Between these blinks there are several longer flashes depending the message. The messages are roughly grouped into categories, indicated by the first longer flash.
+        <table>
+            <tr><td>red</td><td>sensor</td></tr>
+            <tr><td>yellow</td><td>leds/pixels</td></tr>
+            <tr><td>green</td><td>detection</td></tr>
+            <tr><td>cyan</td><td>connection</td></tr>
+            <tr><td>blue</td><td>registration of clients</td></tr>
+            <tr><td>magenta</td><td>movement</td></tr>
+        </table>
+For more details check the list below.</dd>
+    </dl>
+
+<h3>Feedback codes</h3>
+<table>
+    <tr><td style="text-align:right">IDLE</td><td style="text-align:center"><span style="background-color:#FFFFFF" class="severity"></span><span style="background-color:#FFFFFF" class="severity"></span></td><td style="text-align:center"><span style="background-color:#FFFFFF" class="severity"></span><span style="background-color:#FFFFFF" class="severity"></span></td></tr>
+    <tr><td class="note" colspan="5">Unused. Only for debugging.</td></tr>
+
+    <tr><td style="text-align:right">BEFORE_DETECT</td><td style="text-align:center"><span style="background-color:#FFFFFF" class="severity"></span><span style="background-color:#FFFFFF" class="severity"></span></td><td style="text-align:center"><span style="background-color:#00FF00" class="digit"></span></td><td style="text-align:center"><span style="background-color:#FF0000" class="digit"></span></td><td style="text-align:center"><span style="background-color:#FFFFFF" class="severity"></span><span style="background-color:#FFFFFF" class="severity"></span></td></tr>
+    <tr><td class="note" colspan="5">Before detecting the rest position of the client.</td></tr>
+
+    <tr><td style="text-align:right">AFTER_DETECT</td><td style="text-align:center"><span style="background-color:#FFFFFF" class="severity"></span><span style="background-color:#FFFFFF" class="severity"></span></td><td style="text-align:center"><span style="background-color:#00FF00" class="digit"></span></td><td style="text-align:center"><span style="background-color:#FFFF00" class="digit"></span></td><td style="text-align:center"><span style="background-color:#FFFFFF" class="severity"></span><span style="background-color:#FFFFFF" class="severity"></span></td></tr>
+    <tr><td class="note" colspan="5">After detecting the rest position of the client.</td></tr>
+
+    <tr><td style="text-align:right">SENSOR_OK</td><td style="text-align:center"><span style="background-color:#00FF00" class="severity"></span><span style="background-color:#00FF00" class="severity"></span></td><td style="text-align:center"><span style="background-color:#FF0000" class="digit"></span></td><td style="text-align:center"><span style="background-color:#00FF00" class="severity"></span><span style="background-color:#00FF00" class="severity"></span></td></tr>
+    <tr><td class="note" colspan="5">After initializing the accelerometer sensor.</td></tr>
+
+    <tr><td style="text-align:right">PIXELS_OK</td><td style="text-align:center"><span style="background-color:#00FF00" class="severity"></span><span style="background-color:#00FF00" class="severity"></span></td><td style="text-align:center"><span style="background-color:#FFFF00" class="digit"></span></td><td style="text-align:center"><span style="background-color:#00FF00" class="severity"></span><span style="background-color:#00FF00" class="severity"></span></td></tr>
+    <tr><td class="note" colspan="5">After initializing the two leds on the clients.</td></tr>
+
+    <tr><td style="text-align:right">CONNECTION_OK</td><td style="text-align:center"><span style="background-color:#00FF00" class="severity"></span><span style="background-color:#00FF00" class="severity"></span></td><td style="text-align:center"><span style="background-color:#00FFFF" class="digit"></span></td><td style="text-align:center"><span style="background-color:#FF0000" class="digit"></span></td><td style="text-align:center"><span style="background-color:#00FF00" class="severity"></span><span style="background-color:#00FF00" class="severity"></span></td></tr>
+    <tr><td class="note" colspan="5">When successfully connected to the WiFi network.</td></tr>
+
+    <tr><td style="text-align:right">REGISTRATION_OK</td><td style="text-align:center"><span style="background-color:#00FF00" class="severity"></span><span style="background-color:#00FF00" class="severity"></span></td><td style="text-align:center"><span style="background-color:#0000FF" class="digit"></span></td><td style="text-align:center"><span style="background-color:#FFFF00" class="digit"></span></td><td style="text-align:center"><span style="background-color:#00FF00" class="severity"></span><span style="background-color:#00FF00" class="severity"></span></td></tr>
+    <tr><td class="note" colspan="5">When successfully with the server.</td></tr>
+
+    <tr><td style="text-align:right">DURING_DETECT</td><td style="text-align:center"><span style="background-color:#FFFF00" class="severity"></span><span style="background-color:#FFFF00" class="severity"></span></td><td style="text-align:center"><span style="background-color:#00FF00" class="digit"></span></td><td style="text-align:center"><span style="background-color:#FF0000" class="digit"></span></td><td style="text-align:center"><span style="background-color:#FFFF00" class="severity"></span><span style="background-color:#FFFF00" class="severity"></span></td></tr>
+    <tr><td class="note" colspan="5">During detecting the rest position of the client.</td></tr>
+
+    <tr><td style="text-align:right">CONNECTION_WAITING</td><td style="text-align:center"><span style="background-color:#FFFF00" class="severity"></span><span style="background-color:#FFFF00" class="severity"></span></td><td style="text-align:center"><span style="background-color:#00FFFF" class="digit"></span></td><td style="text-align:center"><span style="background-color:#FFFF00" class="severity"></span><span style="background-color:#FFFF00" class="severity"></span></td></tr>
+    <tr><td class="note" colspan="5">During waiting for WiFi connection.</td></tr>
+
+    <tr><td style="text-align:right">SENSOR_INIT_ERROR</td><td style="text-align:center"><span style="background-color:#FF0000" class="severity"></span><span style="background-color:#FF0000" class="severity"></span></td><td style="text-align:center"><span style="background-color:#FF0000" class="digit"></span></td><td style="text-align:center"><span style="background-color:#FF0000" class="digit"></span></td><td style="text-align:center"><span style="background-color:#FF0000" class="severity"></span><span style="background-color:#FF0000" class="severity"></span></td></tr>
+    <tr><td class="note" colspan="5">When there are some error with the sensor initialization.</td></tr>
+
+    <tr><td style="text-align:right">SENSOR_ERROR</td><td style="text-align:center"><span style="background-color:#FF0000" class="severity"></span><span style="background-color:#FF0000" class="severity"></span></td><td style="text-align:center"><span style="background-color:#FF0000" class="digit"></span></td><td style="text-align:center"><span style="background-color:#FFFF00" class="digit"></span></td><td style="text-align:center"><span style="background-color:#FF0000" class="severity"></span><span style="background-color:#FF0000" class="severity"></span></td></tr>
+    <tr><td class="note" colspan="5">When there are some general error with the sensor.</td></tr>
+
+    <tr><td style="text-align:right">CONNECTION_ERROR</td><td style="text-align:center"><span style="background-color:#FF0000" class="severity"></span><span style="background-color:#FF0000" class="severity"></span></td><td style="text-align:center"><span style="background-color:#00FFFF" class="digit"></span></td><td style="text-align:center"><span style="background-color:#FF0000" class="digit"></span></td><td style="text-align:center"><span style="background-color:#FF0000" class="severity"></span><span style="background-color:#FF0000" class="severity"></span></td></tr>
+    <tr><td class="note" colspan="5">When the client are unable to connect to the WiFi network.</td></tr>
+
+    <tr><td style="text-align:right">CONNECTION_LOST</td><td style="text-align:center"><span style="background-color:#FF0000" class="severity"></span><span style="background-color:#FF0000" class="severity"></span></td><td style="text-align:center"><span style="background-color:#00FFFF" class="digit"></span></td><td style="text-align:center"><span style="background-color:#FFFF00" class="digit"></span></td><td style="text-align:center"><span style="background-color:#FF0000" class="severity"></span><span style="background-color:#FF0000" class="severity"></span></td></tr>
+    <tr><td class="note" colspan="5">When WiFi network connection lost (router are inactive).</td></tr>
+
+    <tr><td style="text-align:right">REGISTRATION_ERROR</td><td style="text-align:center"><span style="background-color:#FF0000" class="severity"></span><span style="background-color:#FF0000" class="severity"></span></td><td style="text-align:center"><span style="background-color:#0000FF" class="digit"></span></td><td style="text-align:center"><span style="background-color:#00FF00" class="digit"></span></td><td style="text-align:center"><span style="background-color:#FF0000" class="severity"></span><span style="background-color:#FF0000" class="severity"></span></td></tr>
+    <tr><td class="note" colspan="5">When the client can not register with the server.</td></tr>
+
+    <tr><td style="text-align:right">MOVEMENT_ERROR</td><td style="text-align:center"><span style="background-color:#FF0000" class="severity"></span><span style="background-color:#FF0000" class="severity"></span></td><td style="text-align:center"><span style="background-color:#FF00FF" class="digit"></span></td><td style="text-align:center"><span style="background-color:#FF0000" class="severity"></span><span style="background-color:#FF0000" class="severity"></span></td></tr>
+    <tr><td class="note" colspan="5">When the client can not send movement data to the server.</td></tr>
+</table>
+</body>
+</html>
