@@ -31,6 +31,24 @@
             text-align: center;
             padding-bottom: 20pt;
         }
+        p.check {
+            color: blue;
+            font-style: italic;
+            margin: 0pt;
+            font-size: small;
+        }
+        p.fix {
+            color: red;
+            font-style: bold;
+            margin: 0pt;
+            font-size: small;
+        }
+        ol li {
+            margin-top: 10pt;
+        }
+        code {
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
@@ -106,5 +124,70 @@ For more details check the list below.</dd>
     <tr><td style="text-align:right">MOVEMENT_ERROR</td><td style="text-align:center"><span style="background-color:#FF0000" class="severity"></span><span style="background-color:#FF0000" class="severity"></span></td><td style="text-align:center"><span style="background-color:#FF00FF" class="digit"></span></td><td style="text-align:center"><span style="background-color:#FF0000" class="severity"></span><span style="background-color:#FF0000" class="severity"></span></td></tr>
     <tr><td class="note" colspan="5">When the client can not send movement data to the server.</td></tr>
 </table>
+
+<h2>Initial Steps</h2>
+<ol>
+    <li>
+        Turn on the router by plug it into the electrical grid.
+        <p class="check">Does wedding-thanks WiFi network available?</p>
+        <p class="fix">Restart the router!</p>
+    </li>
+    <li>
+        Connect the laptop via UTP cable to the router (slot#1).
+    </li>
+    <li>
+        Turn on the laptop and login into Windows (use the pin code).
+        <p class="check">Is laptop connected to the network?</p>
+        <img src="server_network.png" style="width: 30%"/>
+        <p class="check">Is laptop ip address is 192.168.1.2 (on the wire network)?</p>
+        <p class="fix">Reconnect to the network!</p>
+    </li>
+    <li>
+        Start the server ("C:\data\wedding-thanks\start_server.bat"). <br />
+        <img src="server_start.png" style="width: 66%"/>
+        <p class="check">http:\\127.0.0.1 displays "Hello World" on the laptop?</p>
+        <p class="check">http:\\192.168.1.2 displays "Hello World" on the laptop?</p>
+        <p class="fix">Restart the server!</p>
+        <p class="check">http:\\192.168.1.2 displays "Hello World" on other device connected to wedding-thanks WiFi network?</p>
+        <p class="fix">Check network connection to the router!</p>
+    </li>
+    <li>
+       For each client in a round-about order, starting from an arbitrary client, do the following.
+       <ol>
+           <li>
+               Turn on the client using the mechanical switch at the bottom of the balloon above the basket.
+               <p class="check">Is the client showing various feedback codes?</p>
+               <p class="fix">Restart the client!</p>
+           </li>
+           <li>
+               Do not move (shake/jig) the client while it is measuring the rest position.<br/>
+               You have approximately 10 seconds to ensure the client is in rest (10 times the BEFORE_DETECT feedback).<br/>
+               It take approximately 10 seconds to measure the rest position (10 time the DURING_DETECT feedback).<br/>
+               <span class="note">There is a broken client which has no accelerometer, so it skips the rest position measuring.</span>
+           </li>
+           <li>
+               Wait until the client is registered with the server:<br/><code>f"successful registration: {address} ({clients.index(address)}th client)"</code><br/>
+               The server will notify you high happy tones (1000 Hz and 3000 Hz) when it happened and the client stop displaying any feedback code.
+           </li>
+       </ol>
+       <p class="check">Do the clients restarts several times or it stuck with a feedback code of severity error?</p>
+       <p class="check">You are able to test each client in sequence on http://127.0.0.1/demo or http://192.168.1.2/demo?</p>
+       <p class="fix">Turn off all clients then restart the server and start again!</p>
+    </li>
+    <li>
+        Push a client (gently).
+        <p class="check">Do the clients show some animation?</p>
+        <p class="check">Does the server notice the movement?<br/>
+        <code>f"the {index}th client is registered a movement"</code></p>
+        <p class="fix">Turn of everything and repeat the whole process!</p>
+        <span class="note">After the server notice a movement it would not accept any new movement for 20 seconds. You could check the remaining time in the server log messages.</span>
+    </li>
+    <li>
+        Send a wish or message via http://192.168.1.2/wish from an other device on wedding-thanks WiFi network.
+        <p class="check">Clients display the requested animation?</p>
+        <p class="check">Does your message visible in the list on the webpage?</p>
+        <p class="fix">Turn of everything and repeat the whole process!</p>
+    </li>
+</ol>
 </body>
 </html>
