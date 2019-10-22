@@ -238,9 +238,11 @@ class Animation(object):
         return self
 
     def play(self):
+        logger.debug("playing animation start")
         with animation_lock:
             for step in self._steps:
                 step.play()
+        logger.debug("playing animation end")
 
     def reverse(self):
         self._steps = self._steps[::-1]
@@ -623,34 +625,42 @@ bouncing_limit = 20
 
 
 def moved(selected: str, offset: int):
-    global last_moved
-    if isinstance(last_moved, float):
-        past_time = time.perf_counter() - last_moved
-        logger.debug(f"{past_time} seconds past since last move")
-        if past_time < bouncing_limit:
-            logger.warning(f"ignoring movement, {bouncing_limit - past_time} seconds left")
-            return
-    last_moved = time.perf_counter()
-    # print(send_toggle())
-    logger.info(f"playing {selected} animation triggered by movement on {offset}th client")
-    animations[selected](offset=offset).play()
-    # print(send_toggle())
+    logger.debug("moved start")
+    try:
+        global last_moved
+        if isinstance(last_moved, float):
+            past_time = time.perf_counter() - last_moved
+            logger.debug(f"{past_time} seconds past since last move")
+            if past_time < bouncing_limit:
+                logger.warning(f"ignoring movement, {bouncing_limit - past_time} seconds left")
+                return
+        last_moved = time.perf_counter()
+        # print(send_toggle())
+        logger.info(f"playing {selected} animation triggered by movement on {offset}th client")
+        animations[selected](offset=offset).play()
+        # print(send_toggle())
+    finally:
+        logger.debug("moved end")
 
 
 @app.route('/move')
 def move():
-    client = request.remote_addr
-    if client in clients:
-        index = clients.index(client)
-        logger.info(f"the {index}th client is registered a movement")
-        if random.random() > .25:
-            thread = threading.Thread(target=moved, args=[random.choice(list(local_animations.keys())), index])
+    logger.debug("move start")
+    try:
+        client = request.remote_addr
+        if client in clients:
+            index = clients.index(client)
+            logger.info(f"the {index}th client is registered a movement")
+            if random.random() > .25:
+                thread = threading.Thread(target=moved, args=[random.choice(list(local_animations.keys())), index])
+            else:
+                thread = threading.Thread(target=moved, args=[random.choice(list(global_animations.keys())), index])
+            thread.start()
+            return '', status.HTTP_200_OK
         else:
-            thread = threading.Thread(target=moved, args=[random.choice(list(global_animations.keys())), index])
-        thread.start()
-        return '', status.HTTP_200_OK
-    else:
-        return '', status.HTTP_500_INTERNAL_SERVER_ERROR
+            return '', status.HTTP_500_INTERNAL_SERVER_ERROR
+    finally:
+        logger.debug("move end")
 
 
 def serve_file(file_name) -> str:
@@ -715,6 +725,26 @@ def init_clients():
         set_limit_on(current)
     send_show(black, black, white, white, 1000, clients)
     send_show(white, white, black, black, 1000, clients)
+
+
+@app.before_request
+def filter_prefetch():
+    logger.debug("before request")
+    logger.debug(request.headers)
+    if 'Purpose' in request.headers and request.headers.get('Purpose') == 'prefetch':
+        logger.debug("prefetch requests are not allowed")
+        return '', status.HTTP_403_FORBIDDEN
+
+
+@app.after_request
+def debug_after(response):
+    logger.debug("after request")
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    response.headers['Cache-Control'] = 'public, max-age=0'
+    response.headers['Connection'] = 'close'
+    return response
 
 
 if __name__ == '__main__':

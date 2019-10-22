@@ -3,8 +3,9 @@
   <component name="ChangeListManager">
     <list default="true" id="03529478-7a44-4611-947e-8e9a4daf91bc" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/doc/setup.html" beforeDir="false" afterPath="$PROJECT_DIR$/doc/setup.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyserver/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/accu_test/get_info.py" beforeDir="false" afterPath="$PROJECT_DIR$/accu_test/get_info.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/accu_test/log.txt" beforeDir="false" afterPath="$PROJECT_DIR$/accu_test/log.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyserver/server.py" beforeDir="false" afterPath="$PROJECT_DIR$/pyserver/server.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -13,7 +14,20 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="FileEditorManager">
-    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300" />
+    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/pyserver/server.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="260">
+              <caret line="31" column="28" selection-start-line="31" selection-start-column="28" selection-end-line="31" selection-end-column="28" />
+              <folding>
+                <element signature="e#0#11#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+    </leaf>
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -45,28 +59,33 @@
         <option value="$PROJECT_DIR$/pyserver/demo.html" />
         <option value="$PROJECT_DIR$/pyserver/wishes.txt" />
         <option value="$PROJECT_DIR$/pyserver/exec.html" />
-        <option value="$PROJECT_DIR$/pyserver/server.py" />
         <option value="$PROJECT_DIR$/doc/setup.html" />
+        <option value="$PROJECT_DIR$/accu_test/get_info.py" />
+        <option value="$PROJECT_DIR$/pyserver/server.py" />
       </list>
     </option>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="-8" />
-    <option name="width" value="977" />
-    <option name="height" value="1038" />
+    <option name="x" value="-10" />
+    <option name="width" value="979" />
+    <option name="height" value="1040" />
   </component>
   <component name="ProjectView">
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
             <path>
               <item name="wedding-thanks" type="b2602c69:ProjectViewProjectNode" />
               <item name="wedding-thanks" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="wedding-thanks" type="b2602c69:ProjectViewProjectNode" />
+              <item name="wedding-thanks" type="462c0819:PsiDirectoryNode" />
+              <item name="accu_test" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="wedding-thanks" type="b2602c69:ProjectViewProjectNode" />
@@ -82,6 +101,7 @@
           <select />
         </subPane>
       </pane>
+      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -170,12 +190,12 @@
   <component name="ToolWindowManager">
     <frame x="-7" y="-7" width="1550" height="838" extended-state="6" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" sideWeight="0.49319214" visible="true" weight="0.28401586" />
-      <window_info id="Structure" order="1" sideWeight="0.50680786" side_tool="true" weight="0.12170706" />
+      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49080622" visible="true" weight="0.12285337" />
+      <window_info id="Structure" order="1" sideWeight="0.5091938" side_tool="true" visible="true" weight="0.12285337" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" weight="0.3281471" />
-      <window_info anchor="bottom" id="Run" order="2" weight="0.2602546" />
+      <window_info anchor="bottom" id="Run" order="2" weight="0.38048092" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.3960396" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
@@ -290,19 +310,7 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/pyserver/__init__.py">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/pyserver/server.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="221">
-          <caret line="644" column="68" selection-start-line="644" selection-start-column="20" selection-end-line="644" selection-end-column="68" />
-          <folding>
-            <element signature="e#0#11#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/pyserver/__init__.py" />
     <entry file="file://$PROJECT_DIR$/doc/setup.html">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="335">
@@ -385,6 +393,26 @@
             <element signature="n#style#0;n#span#1;n#td#4;n#tr#14;n#table#0;n#body#0;n#html#0;n#!!top" expanded="true" />
             <element signature="n#style#0;n#img#0;n#li#2;n#ol#0;n#body#0;n#html#0;n#!!top" expanded="true" />
             <element signature="n#style#0;n#img#0;n#li#3;n#ol#0;n#body#0;n#html#0;n#!!top" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/accu_test/get_info.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="270">
+          <caret line="17" selection-start-line="17" selection-end-line="17" />
+          <folding>
+            <element signature="e#0#21#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pyserver/server.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="260">
+          <caret line="31" column="28" selection-start-line="31" selection-start-column="28" selection-end-line="31" selection-end-column="28" />
+          <folding>
+            <element signature="e#0#11#0" expanded="true" />
           </folding>
         </state>
       </provider>
