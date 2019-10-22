@@ -1,4 +1,4 @@
 @echo off
-cd C:\data\wedding-thanks
+cd C:\data\wedding-thanks\pyserver
 del reg.txt
-python pyserver\server.py
+python server.py
