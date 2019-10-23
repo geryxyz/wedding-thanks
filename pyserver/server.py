@@ -730,10 +730,6 @@ def init_clients():
 @app.before_request
 def filter_prefetch():
     logger.debug("before request")
-    logger.debug(request.headers)
-    if 'Purpose' in request.headers and request.headers.get('Purpose') == 'prefetch':
-        logger.debug("prefetch requests are not allowed")
-        return '', status.HTTP_403_FORBIDDEN
 
 
 @app.after_request
@@ -755,4 +751,4 @@ if __name__ == '__main__':
     init_clients()
 
     logger.info('starting web server life cycle')
-    app.run(host='0.0.0.0', port=80, debug=False)
+    app.run(host='0.0.0.0', port=80, debug=True, threaded=True)
