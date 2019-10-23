@@ -683,11 +683,16 @@ def exec():
         with codecs.open('wishes.txt', 'a', encoding='utf-8') as wishes:
             wishes.write(f'{datetime.datetime.now()}\t{wish}\t{name}\t{animation}\t{request.remote_addr}\n')
         threading.Thread(target=animations[animation]().play).start()
-    wishes_as_html = []
+    previous_wishes = []
     with codecs.open('wishes.txt', 'r', encoding='utf-8') as wishes:
         for line in wishes:
-            parts = line.strip().split('\t')
-            wishes_as_html.append(f'<p class="wish">{parts[1]} <span class="animation">{animations[parts[3]].hungarian_name}</span> <span class="name">- {parts[2]} ({parts[-1]})</span></p>')
+            previous_wishes.append(line.strip().split('\t'))
+    wishes_as_html = []
+    for entry in sorted(previous_wishes, key=lambda e: e[0], reverse=True)[:10]:
+        wishes_as_html.append(f'<p class="wish"><span class="animation">{animations[entry[3]].hungarian_name}</span>'
+                              f'<br/>{entry[1]}'
+                              f' <span class="name">- {entry[2]}</span></p>'
+                              f'<p class="date">{entry[0]} ({entry[-1]})</p>')
     return serve_file('exec.html').replace('<p class="wish"></p>', '\n'.join(wishes_as_html)), status.HTTP_200_OK
 
 
@@ -751,4 +756,4 @@ if __name__ == '__main__':
     init_clients()
 
     logger.info('starting web server life cycle')
-    app.run(host='0.0.0.0', port=80, debug=True, threaded=True)
+    app.run(host='0.0.0.0', port=80, debug=False, threaded=True)
